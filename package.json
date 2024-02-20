@@ -4,22 +4,24 @@
   "version": "0.0.1",
   "description": "„Õpetaja assistent“ on Chrome'i laiendus, mis on loodud selleks, et aidata õpetajatel õppeinfosüsteemis rühmade päevikuid kontrollida ja nendes esinevaid puudujääke, nagu puuduolevad tunnid või määramata lõpphinded, automaatselt kõrvaldada. Laiendus tuvastab ja tõstab esile puuduolevad tunnid ja hinded, andes ühtlasi ülevaate ainete lõpetamise staatusest ja paljust muust. See on mõeldud olema tõhus vahend õpetajatele, muutes nende töö lihtsamaks ja korraldatumaks.",
   "author": " Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.",
+  "packageManager": "pnpm@7.5.0",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package"
   },
   "dependencies": {
-    "plasmo": "^0.73.7",
-    "svelte": "^3.59.1",
-    "svelte-preprocess": "^5.0.4"
+    "svelte": "^4.2.11",
+    "svelte-preprocess": "^5.1.3"
   },
   "devDependencies": {
     "@plasmohq/prettier-plugin-sort-imports": "^3.6.4",
+    "@tsconfig/svelte": "^5.0.2",
     "@types/chrome": "^0.0.237",
-    "@types/node": "^20.2.4",
+    "@types/node": "^20.11.19",
+    "plasmo": "^0.84.2",
     "prettier": "^2.8.8",
-    "typescript": "^5.0.4"
+    "typescript": "^5.3.3"
   },
   "manifest": {
     "host_permissions": [
