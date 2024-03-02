@@ -1,367 +1,382 @@
-import TableComponent from './TableComponent.svelte';
+// @ts-ignore
+import type {
+    Database,
+    Journal,
+    JournalEntryApiResponse,
+    TimetableByTeacherResponse,
+    TimetableEventApiResponse
+} from './types';
 
-function setupActionListener() {
-    document.addEventListener('click', function (e) {
-        if (!(e.target instanceof Element)) return;
 
-        // Check if the clicked element or its parents have a matching role for any button
-        const clickedElement = e.target.closest(".md-button.md-ink-ripple");
+// Save current URL to variable
+const currentUrl: string = window.location.href;
 
-        // Proceed if we found a matching element and it has an 'ng-click' attribute
-        if (clickedElement && clickedElement.getAttribute('ng-click')) {
-            const ngClickValue = clickedElement.getAttribute('ng-click');
-
-            // Check if the ng-click attribute value matches either the save or delete confirmation function
-            if (ngClickValue === 'saveEntry()' || ngClickValue === 'accept()') {
-                console.log("Action button clicked (save or delete), preparing to refetch data...");
-                setTimeout(() => {
-                    fetchData(); // Refetch data after a delay
-                }, 1000); // Adjust delay as necessary
-            }
-        }
-    });
+// Function to extract base URL
+function extractBaseUrl(url: string): string {
+    // Find the index of '#'
+    const hashIndex = url.indexOf('#');
+    // Remove everything after '#' including '#'
+    const baseUrl = url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
+    return baseUrl;
 }
 
-// Function to fetch and manipulate JSON data
+// Extract base URL from example URLs
+const baseUrl: string = extractBaseUrl(currentUrl);
 
-async function fetchData() {
+// Function to get teacher and school data
+async function getUserData(): Promise<{ schoolId: number, teacherId: number }> {
+    const response = await fetch(`${baseUrl}hois_back/user`);
+    const data = await response.json();
+    const schoolId = data.school.id; // 9 = Viljandi Kutseõppekeskus
+    // const teacherId = data.teacher;
+    const teacherId = 18737; // Teacher Henno Täht for testing
+    return { schoolId, teacherId };
+}
+
+// Function to get timetable study years - startDate from the first study year and endDate from the last study year
+async function fetchTimetableStudyYears() {
+    const response = await fetch(`${baseUrl}hois_back/timetables/timetableStudyYears/9`);
+    const timetableStudyYears = await response.json();
+
+    if (timetableStudyYears.length > 0) {
+        // const firstStartDate = timetableStudyYears[0].startDate;
+        const firstStartDate = "2023-07-31T00:00:00Z"; // 2023-07-31T00:00:00Z for testing
+        const lastEndDate = timetableStudyYears[timetableStudyYears.length - 1].endDate;
+
+        console.log("First Start Date:", firstStartDate);
+        console.log("Last End Date:", lastEndDate);
+
+        // Now we can call getUserData and updateCacheWithTimetableEvents with the schoolId, teacherId and dates dynamically
+        getUserData().then(({ schoolId, teacherId }) => {
+            updateCacheWithTimetableEvents(schoolId, teacherId, firstStartDate, lastEndDate).then(() => console.log(cache));
+        });
+    } else {
+        console.error("Timetable study years array is empty.");
+    }
+}
+
+// Call the async function
+fetchTimetableStudyYears();
+
+// Declare cache
+const cache: Database = {
+    journals: [],
+    lessonTimes: [
+        {
+            number: 1,
+            timeStart: "08:15",
+            timeEnd: "09:00"
+        },
+        {
+            number: 2,
+            timeStart: "09:10",
+            timeEnd: "09:55"
+        },
+        {
+            number: 3,
+            timeStart: "09:56",
+            timeEnd: "10:40"
+        },
+        {
+            number: 4,
+            timeStart: "10:50",
+            timeEnd: "11:35"
+        },
+        {
+            number: 5,
+            timeStart: "11:40",
+            timeEnd: "12:25",
+            note: "I kursuse lõuna"
+        },
+        {
+            number: 6,
+            timeStart: "12:30",
+            timeEnd: "13:15",
+            note: "II ja III kursuse lõuna"
+        },
+        {
+            number: 7,
+            timeStart: "13:20",
+            timeEnd: "14:05"
+        },
+        {
+            number: 8,
+            timeStart: "14:10",
+            timeEnd: "14:55"
+        },
+        {
+            number: 9,
+            timeStart: "15:00",
+            timeEnd: "15:45"
+        },
+        {
+            number: 10,
+            timeStart: "15:55",
+            timeEnd: "16:35"
+        },
+        {
+            number: 11,
+            timeStart: "16:45",
+            timeEnd: "17:30"
+        },
+        {
+            number: 12,
+            timeStart: "17:40",
+            timeEnd: "18:25"
+        },
+        {
+            number: 13,
+            timeStart: "18:35",
+            timeEnd: "19:20"
+        },
+        {
+            number: 14,
+            timeStart: "19:30",
+            timeEnd: "20:15"
+        }
+    ]
+};
+
+// Function to update cache with timetable events
+async function updateCacheWithTimetableEvents(schoolId: number, teacherId: number, from: string, thru: string): Promise<void> {
+    const url = `${baseUrl}hois_back/timetableevents/timetableByTeacher/${schoolId}?from=${from}&lang=ET&teachers=${teacherId}&thru=${thru}`;
     try {
-        // Fetch user data
-        const response = await fetch('https://test.tahvel.eenet.ee/hois_back/user');
+        const data = await fetchData<TimetableByTeacherResponse>(url);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Filter out data where journalId is null
+        const filteredData = data.timetableEvents.filter(event => event.journalId !== null);
+
+        // console.log("Filtered Data:", filteredData);
+
+        // debugger
+        updateTimetableEventsInCache(filteredData);
+
+        // Extract unique journalIds from the timetable events
+        const uniqueJournalIds = Array.from(new Set(filteredData.map(event => event.journalId)));
+        console.log("uniqueJournalIds", uniqueJournalIds);
+
+        // For each unique journalId, fetch and update cache with journal entries
+        for (const journalId of uniqueJournalIds) {
+            // @ts-ignore
+            await updateCacheWithJournalEntries(journalId);
         }
-
-        // Get the response data
-        const data = await response.json();
-
-        // Extract the desired properties from the data
-        const teacherId = data.teacher;
-        // const fullName = data.fullname;
-        const schoolId = data.school.id;
-
-        // Fetch the second set of data using the school ID
-        const timetableResponse = await fetch(`https://test.tahvel.eenet.ee/hois_back/timetables/timetableStudyYears/${schoolId}`);
-        const ttdata = await timetableResponse.json();
-
-        // Fetch all available lessonplans - FOR loop starts here
-        for (const item of ttdata) {
-            console.log("------------------");
-            const id = item.id;
-            const startDate = item.startDate;
-            const endDate = item.endDate;
-
-            // Planeeritud koormused
-            const JournalResponse = await fetch(`https://test.tahvel.eenet.ee/hois_back/lessonplans/byteacher/${teacherId}/${id}`);
-            const journalData = await JournalResponse.json();
-            // console.log(`Koormused: Journal Data for ID ${id}:`, journalData);
-
-            // Process and count "MAHT_i" and "MAHT_a" grouped by journal's id
-            const journalCounts = countHoursByJournalId(journalData);
-            console.log(`Koormused ${id}:`, journalCounts);
-
-            // Tunniplaan - tunniplaani kantud tundide arvutus
-            const lessonsResponse = await fetch(`https://test.tahvel.eenet.ee/hois_back/timetableevents/timetableByTeacher/${schoolId}?from=${startDate}&lang=ET&teachers=18737&thru=${endDate}`); // õpetaja Henno ID - meie omaga ei tule infot
-            // const lessonsResponse = await fetch(`https://test.tahvel.eenet.ee/hois_back/timetableevents/timetableByTeacher/${schoolId}?from=${startDate}&lang=ET&teachers=${teacherId}&thru=${endDate}`);
-            try {
-                if (!lessonsResponse.ok) {
-                    throw new Error(`HTTP error! status: ${lessonsResponse.status}`);
-                }
-                const lessonData = await lessonsResponse.json();
-
-                if (lessonData && Array.isArray(lessonData.timetableEvents)) {
-                    // Adjust the type to support counting by journalId and date
-                    const journalIdCounts: { [key: number]: { [date: string]: number } } = {};
-
-                    // Count occurrences of each journalId and date
-                    lessonData.timetableEvents.forEach((event: { journalId: number, date: string }) => {
-                        const { journalId, date } = event;
-                        if (journalId !== null && date) {
-                            if (!journalIdCounts[journalId]) {
-                                journalIdCounts[journalId] = {};
-                            }
-                            if (!journalIdCounts[journalId][date]) {
-                                journalIdCounts[journalId][date] = 0;
-                            }
-                            journalIdCounts[journalId][date] += 1;
-                        }
-                    });
-
-                    // Now journalIdCounts[journalId][date] gives the count of events for that journalId on that date
-                    console.log(`Tunniplaan: Lesson data Counts for ${id}:`, journalIdCounts);
-
-                    // Võrdleme koormusi tunniplaanis olevate andmetega
-                    for (const journalId in journalIdCounts) {
-                        if (journalCounts[journalId]) {
-                            const journalCountA = journalCounts[journalId].MAHT_a;
-                            const journalIdCount = journalIdCounts[journalId];
-
-                            // Leiame päevikusse sisse kantud tunnid
-                            const insertedLessonsResponse = await fetch(`https://test.tahvel.eenet.ee/hois_back/journals/${journalId}/journalEntry?lang=ET`);
-                            if (!insertedLessonsResponse.ok) {
-                                throw new Error(`HTTP error! status: ${insertedLessonsResponse.status}`);
-                            }
-                            // entryDate
-                            const insertedData = await insertedLessonsResponse.json();
-
-                            // Create an object to store the sum of lessons for each entryType and entryDate
-                            const sumByEntryTypeAndDate = {};
-
-                            // Iterate through the content array
-                            insertedData.content.forEach(entry => {
-                                const { entryType, lessons, entryDate } = entry;
-                                const uniqueKey = `${entryDate}-${entryType}`;
-
-                                // If the uniqueKey is not in the sumByEntryTypeAndDate object, initialize it with lessons
-                                if (!sumByEntryTypeAndDate[uniqueKey]) {
-                                    sumByEntryTypeAndDate[uniqueKey] = {
-                                        journalId: journalId,
-                                        entryDate: entryDate,
-                                        entryType: entryType,
-                                        sum: lessons
-                                    };
-                                } else {
-                                    // If the uniqueKey already exists in the object, add the lessons to the existing sum
-                                    sumByEntryTypeAndDate[uniqueKey].sum += lessons;
-                                }
-                            });
-
-                            // Convert the object into an array of sums
-                            const sumArray = Object.values(sumByEntryTypeAndDate);
-
-                            console.log("Summeeritud tunnid:", sumArray);
-
-                            interface SumEntry {
-                                journalId: string;
-                                entryDate: string;
-                                entryType: string;
-                                sum: number;
-                            }
-
-                            // Assuming lessonData and sumArray are already fetched and available
-
-                            // Log the structure of lessonData
-                            console.log("Lesson Data:", lessonData);
-
-                            // Initialize an object to store counts for each journalId and entryDate
-                            const countMap: { [journalId: string]: { [entryDate: string]: number } } = {};
-
-                            // Iterate over timetableEvents in lessonData to populate countMap
-                            lessonData.timetableEvents.forEach((event: any) => {
-                                const { journalId, date } = event;
-                                // If the journalId is not yet in the countMap, initialize it
-                                if (!countMap[journalId]) {
-                                    countMap[journalId] = {};
-                                }
-                                // If the entryDate is not yet in the countMap for the journalId, initialize it with count 0
-                                if (!countMap[journalId][date]) {
-                                    countMap[journalId][date] = 0;
-                                }
-                                // Increment the count for the corresponding journalId and entryDate
-                                countMap[journalId][date]++;
-                            });
-
-                            // Iterate over sumArray to compare sums with counts
-                            const comparisonResults: { entryDate: string, matches: boolean }[] = [];
-                            sumArray.forEach((sumEntry: any) => {
-                                const { journalId, entryDate, entryType, sum } = sumEntry;
-                                // Check if the entryType is "SISSEKANNE_T"
-                                if (entryType === "SISSEKANNE_T") {
-                                    // Get the count from countMap for the corresponding journalId and entryDate
-                                    const count = countMap[journalId]?.[entryDate] || 0;
-                                    // Debugging: Log the values being compared
-                                    console.log(`Comparing entryDate: ${entryDate}, sum: ${sum}, count: ${count}`);
-                                    // Compare the sum with the count
-                                    const matches = sum === count;
-                                    // Push the comparison result to the results array
-                                    comparisonResults.push({
-                                        entryDate: entryDate,
-                                        matches: matches
-                                    });
-                                }
-                            });
-
-                            // Output the comparison results
-                            console.log("Võrdlemine", comparisonResults);
-
-                            // Inside fetchData, after fetching and processing journal and lesson data
-                            compareMAHTValuesAndInjectIfNeeded(journalId, journalCounts, insertedData);
-
-
-                        } else {
-                            console.log(`Journal ID ${journalId} not found in journalCounts.`);
-                        }
-                    }
-                } else {
-                    console.log('Journal data is not in the expected format');
-                }
-            } catch (error) {
-                console.error('Error fetching journal data:', error);
-            }
-            // <--
-        }
-
-        // Function to count "MAHT_i" and "MAHT_a" values grouped by journal id
-        function countHoursByJournalId(data: any): { [key: number]: { MAHT_i: number, MAHT_a: number } } {
-            const journalHoursSummary: { [key: number]: { MAHT_i: number, MAHT_a: number } } = {};
-
-            if (!data.journals || !Array.isArray(data.journals)) {
-                console.log('Journal data is not in the expected format or missing journals');
-                return journalHoursSummary;
-            }
-
-            data.journals.forEach((journal: any) => {
-                const journalId = journal.id;
-                const MAHT_iHours = journal.hours?.MAHT_i ?? [];
-                const MAHT_aHours = journal.hours?.MAHT_a ?? [];
-
-                // Sum "MAHT_i"
-                const sumMAHT_i = MAHT_iHours.reduce((acc: number, current: number | null) => acc + (current ?? 0), 0);
-
-                // Sum "MAHT_a"
-                const sumMAHT_a = MAHT_aHours.reduce((acc: number, current: number | null) => acc + (current ?? 0), 0);
-
-                journalHoursSummary[journalId] = { MAHT_i: sumMAHT_i, MAHT_a: sumMAHT_a };
-            });
-
-            return journalHoursSummary;
-        }
-
     } catch (error) {
-        console.error('There was a problem fetching the data:', error);
+        console.error(`Error fetching timetable events: ${error}`);
     }
 }
 
-// Encapsulated comparison and conditional injection function
-async function compareMAHTValuesAndInjectIfNeeded(journalId, journalCounts, insertedData) {
-    if (!journalCounts[journalId]) {
-        console.log(`No journal counts found for journal ID ${journalId}.`);
-        return;
+async function fetchData<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
+    return response.json();
+}
 
-    const { MAHT_i: journalCountI, MAHT_a: journalCountA } = journalCounts[journalId];
-    let sumSISSEKANNE_I = 0;
-    let sumSISSEKANNE_T = 0;
-
-    // Sum lessons based on entryType
-    insertedData.content.forEach(entry => {
-        const { entryType, lessons } = entry;
-        if (entryType === 'SISSEKANNE_I') {
-            sumSISSEKANNE_I += lessons;
-        } else if (entryType === 'SISSEKANNE_T') {
-            sumSISSEKANNE_T += lessons;
+function updateTimetableEventsInCache(events: TimetableEventApiResponse[]): void {
+    events.forEach(event => {
+        let journal = cache.journals.find(j => j.id === event.journalId);
+        if (!journal) {
+            journal = createNewJournal(event.journalId, event.nameEt);
+            cache.journals.push(journal);
         }
+
+        // Find the corresponding lesson time based on the event's start time
+        const lessonTime = cache.lessonTimes.find(lesson => lesson.timeStart === event.timeStart);
+        let number = null;
+        if (lessonTime) {
+            number = lessonTime.number;
+        }
+
+        journal.entriesInTimetable.push({
+            id: event.id,
+            date: event.date,
+            timeStart: event.timeStart,
+            timeEnd: event.timeEnd,
+            number: number, // Add the number property
+        });
     });
-
-    // Compare MAHT_i with sumSISSEKANNE_I
-    if (journalCountI !== sumSISSEKANNE_I) {
-        console.log(`Journal ID ${journalId} MAHT_i does not match. Expected: ${journalCountI}, Actual: ${sumSISSEKANNE_I}`);
-        injectSvelteComponent(journalId);
-    } else {
-        console.log(`Journal ID ${journalId} MAHT_i matches: ${journalCountI}`);
-    }
-
-    // Compare MAHT_a with sumSISSEKANNE_T
-    if (journalCountA !== sumSISSEKANNE_T) {
-        console.log(`Journal ID ${journalId} MAHT_a does not match. Expected: ${journalCountA}, Actual: ${sumSISSEKANNE_T}`);
-        injectSvelteComponent(journalId);
-    } else {
-        console.log(`Journal ID ${journalId} MAHT_a matches: ${journalCountA}`);
-    }
 }
 
-// Modified version of the injectSvelteComponent function to inject the Svelte component and store information about the injection
-function injectSvelteComponent(journalId) {
-    const anchorElement = document.querySelector(`a[href="/#/journal/${journalId}/edit"]`);
-    const existingSpan = document.querySelector(`span[data-journal-id="${journalId}"]`);
 
-    if (!existingSpan) {
-        if (anchorElement) {
-            const container = document.createElement('span');
-            container.setAttribute('data-injected', 'true');
-            container.setAttribute('data-journal-id', journalId); // Add journal ID attribute
-            container.setAttribute('id', `injected-span-${journalId}`); // Add unique ID
-            anchorElement.parentNode.insertBefore(container, anchorElement.nextSibling);
-
-            // Assume TableComponent is imported at the top of your file
-            new TableComponent({
-                target: container,
-                props: {
-                    journalId: journalId
-                },
+async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
+    const url = `${baseUrl}hois_back/journals/${journalId}/journalEntriesByDate`;
+    try {
+        const entries = await fetchData<JournalEntryApiResponse[]>(url);
+        // Find the corresponding journal in the cache
+        const journal = cache.journals.find(j => j.id === journalId);
+        if (journal) {
+            // Update the entriesInJournal array of the journal
+            entries.forEach(entry => {
+                journal.entriesInJournal.push({
+                    entryDate: entry.entryDate,
+                    nameEt: entry.nameEt,
+                    entryType: entry.entryType,
+                    startLessonNr: entry.startLessonNr,
+                    lessons: entry.lessons,
+                    id: entry.id,
+                });
             });
-
-            // Store information about the injection in localStorage
-            const injectedComponents = JSON.parse(localStorage.getItem('injectedComponents')) || {};
-            injectedComponents[journalId] = true;
-            localStorage.setItem('injectedComponents', JSON.stringify(injectedComponents));
-        } else {
-            console.log(`Anchor element not found for journal ID ${journalId}.`);
-        }
-    } else {
-        console.log(`Span element already exists for journal ID ${journalId}.`);
+           }
+        compareTimetableAndJournalEntries(journal);
+    } catch (error) {
+        console.error(`Error fetching journal entries: ${error}`);
     }
 }
 
-function observePageChanges() {
-    window.onload = function () {
-        // Override history.pushState method to listen for changes
-        const originalPushState = history.pushState;
-        history.pushState = function (...args) {
-            originalPushState.apply(this, args);
-            checkPageAndInjectIfNeeded();
-        };
 
-        // Listen for popstate event
-        window.addEventListener('popstate', checkPageAndInjectIfNeeded);
+function updateJournalEntriesInCache(journalId: number, entries: JournalEntryApiResponse[]): void {
+    cache.journals = entries.map(entry => {
+        const journal = cache.journals.find(j => j.id === entry.id) || createNewJournal(journalId, entry.nameEt);
+        journal.entriesInJournal.push({
+            entryDate: entry.entryDate,
+            nameEt: entry.nameEt,
+            entryType: entry.entryType,
+            startLessonNr: entry.startLessonNr,
+            lessons: entry.lessons,
+            id: entry.id,
+        });
+        return journal;
+    });
+}
 
-        // Check if the current page is the target and if the component needs to be injected
-        function checkPageAndInjectIfNeeded() {
-            const isTargetPage = window.location.href.includes('#/journals?_menu');
-            if (isTargetPage) {
-                console.log('User is on the target page. Check and inject component if needed.');
-                // Inject the component
-                injectComponentIfNeeded();
-            }
-        }
-
-        // Initial check in case the page is loaded directly on the target URL
-        checkPageAndInjectIfNeeded();
+function createNewJournal(id: number, nameEt: string): Journal {
+    return {
+        id: id,
+        nameEt: nameEt,
+        entriesInTimetable: [],
+        entriesInJournal: []
     };
 }
 
-function injectComponentIfNeeded() {
-    // Find all anchor elements that match the pattern
-    const anchorElements = document.querySelectorAll('a[ng-if="row.canEdit"]');
+// Function to compare entriesInTimetable and entriesInJournal
+function compareTimetableAndJournalEntries(journal: Journal): void {
+    const matchingDates: { date: string, journalId: number }[] = [];
+    const missingEntriesInJournalMap: Map<string, { date: string, journalId: number, countLessonsInTimetable: number }> = new Map();
+    const missingEntriesInTimetable: { date: string, journalId: number }[] = [];
+    const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
 
-    // Loop through each anchor element
-    anchorElements.forEach(anchorElement => {
-        // Create the span element
-        const spanElement = document.createElement('span');
-        spanElement.style.borderRadius = '4px';
-        spanElement.style.color = 'white';
-        spanElement.style.backgroundColor = 'red';
-        spanElement.style.padding = '4px';
-        spanElement.style.marginLeft = '5px';
-        spanElement.textContent = '!!!';
+    // Filter entries in entriesInJournal with entryType: 'SISSEKANNE_T'
+    const relevantEntriesInJournal = journal.entriesInJournal.filter(entry => entry.entryType === 'SISSEKANNE_T');
 
-        // Inject the span element after the anchor element
-        anchorElement.parentNode.insertBefore(spanElement, anchorElement.nextSibling);
+    relevantEntriesInJournal.forEach(entry => {
+        const timetableEntriesOnDate = journal.entriesInTimetable.filter(timetableEntry =>
+            timetableEntry.date === entry.entryDate
+        );
+
+        if (timetableEntriesOnDate.length > 0) {
+            matchingDates.push({ date: entry.entryDate, journalId: journal.id });
+        } else {
+            const countLessons = countLessonsInTimetable(entry.entryDate, journal.id);
+            missingEntriesInTimetable.push({ date: entry.entryDate, journalId: journal.id });
+
+            // Store unique values in a Map
+            const key = `${entry.entryDate}_${journal.id}`;
+            if (countLessons > 0 && !missingEntriesInJournalMap.has(key)) {
+                missingEntriesInJournalMap.set(key, { date: entry.entryDate, journalId: journal.id, countLessonsInTimetable: countLessons });
+            }
+        }
+
+        // Compare counted timetable lessons with journal lessons
+        const timetableLessons = countLessonsInTimetable(entry.entryDate, journal.id);
+        if (timetableLessons !== entry.lessons) {
+            if (timetableLessons !== 0) {
+                mismatchingLessons.push({
+                    date: entry.entryDate,
+                    timetableLessons: timetableLessons,
+                    journalLessons: entry.lessons,
+                    journalId: journal.id,
+                });
+            }
+        }
     });
+
+    // Check for lessons in entriesInTimetable not present in entriesInJournal
+    journal.entriesInTimetable.forEach(timetableEntry => {
+        const isMatchingDate = relevantEntriesInJournal.some(entry => entry.entryDate === timetableEntry.date);
+        if (!isMatchingDate) {
+            const countLessons = countLessonsInTimetable(timetableEntry.date, journal.id);
+
+            // Store unique values in a Map
+            const key = `${timetableEntry.date}_${journal.id}`;
+            if (countLessons > 0 && !missingEntriesInJournalMap.has(key)) {
+                missingEntriesInJournalMap.set(key, { date: timetableEntry.date, journalId: journal.id, countLessonsInTimetable: countLessons });
+            }
+        }
+    });
+
+    // Convert Map values to array
+    const missingEntriesInJournal = Array.from(missingEntriesInJournalMap.values());
+
+    // Log or use the arrays as needed
+    console.log("Matching Dates:", matchingDates);
+    console.log("Missing Entries in Journal:", missingEntriesInJournal);
+    console.log("Missing Entries in Timetable:", missingEntriesInTimetable);
+    console.log("Mismatching Lessons:", mismatchingLessons);
+
+    // Display missingEntriesInJournal on the webpage
+    displayMissingEntriesInJournal(missingEntriesInJournal);
 }
 
-// Call observePageChanges to start observing page changes
-observePageChanges();
+// Function to display missingEntriesInJournal on the webpage
+function displayMissingEntriesInJournal(missingEntries: { date: string, journalId: number, countLessonsInTimetable: number }[]): void {
+    const container = document.querySelector('.ois-form-layout-padding');
 
+    if (container) {
+        const missingEntriesDiv = document.createElement('div');
+        missingEntriesDiv.className = 'missing-entries';
 
+        // Filter and map the dates
+        const dateMessages = missingEntries.map(entry => formatDate(entry.date));
 
-// Function to initialize the application
-function init() {
-    console.log("Initial setup...");
-    setupActionListener();
-    fetchData();
-    observePageChanges(); // Start observing changes to re-inject components as needed
+        // Create and append content to the missingEntriesDiv
+        if (dateMessages.length > 0) {
+            const titleDiv = document.createElement('div');
+            titleDiv.textContent = 'Sissekandmata tunnid:';
+            titleDiv.style.fontWeight = 'bold';
+            titleDiv.style.color = 'red'; // Set the title text color to red
+            missingEntriesDiv.appendChild(titleDiv);
+
+            dateMessages.forEach(dateMessage => {
+                const entryDiv = document.createElement('div');
+                entryDiv.textContent = dateMessage;
+                entryDiv.style.color = 'red'; // Set the text color to red
+                missingEntriesDiv.appendChild(entryDiv);
+            });
+
+            // Append missingEntriesDiv to the container
+            container.appendChild(missingEntriesDiv);
+        } else {
+            console.error("No missing entries to display.");
+        }
+    } else {
+        console.error("Container not found on the webpage.");
+    }
 }
 
-init(); // Initialize the application
+// Function to format date to DD.MM.YYYY
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+}
+
+// Function to count unique lessons in entriesInTimetable per date and journalId
+function countLessonsInTimetable(date: string, journalId: number): number {
+    const uniqueLessons = new Set<number>();
+
+    cache.journals.forEach(journal => {
+        if (journal.id === journalId) {
+            const timetableEntriesOnDate = journal.entriesInTimetable.filter(entry =>
+                entry.date === date && entry.number !== null
+            );
+            timetableEntriesOnDate.forEach(entry => {
+                uniqueLessons.add(entry.number);
+            });
+        }
+    });
+
+    return uniqueLessons.size;
+}
