@@ -314,54 +314,10 @@ function compareTimetableAndJournalEntries(journal: Journal): void {
     console.log("Missing Entries in Timetable:", missingEntriesInTimetable);
     console.log("Mismatching Lessons:", mismatchingLessons);
 
-    // Display missingEntriesInJournal on the webpage
-    displayMissingEntriesInJournal(missingEntriesInJournal);
+    // Call this function after fetching and comparing data
+    displayMissingEntriesInJournalAndTimetable(missingEntriesInJournal, missingEntriesInTimetable, mismatchingLessons);
 }
 
-// Function to display missingEntriesInJournal on the webpage
-function displayMissingEntriesInJournal(missingEntries: { date: string, journalId: number, countLessonsInTimetable: number }[]): void {
-    const container = document.querySelector('.ois-form-layout-padding');
-
-    if (container) {
-        const missingEntriesDiv = document.createElement('div');
-        missingEntriesDiv.className = 'missing-entries';
-
-        // Filter and map the dates
-        const dateMessages = missingEntries.map(entry => formatDate(entry.date));
-
-        // Create and append content to the missingEntriesDiv
-        if (dateMessages.length > 0) {
-            const titleDiv = document.createElement('div');
-            titleDiv.textContent = 'Sissekandmata tunnid:';
-            titleDiv.style.fontWeight = 'bold';
-            titleDiv.style.color = 'red'; // Set the title text color to red
-            missingEntriesDiv.appendChild(titleDiv);
-
-            dateMessages.forEach(dateMessage => {
-                const entryDiv = document.createElement('div');
-                entryDiv.textContent = dateMessage;
-                entryDiv.style.color = 'red'; // Set the text color to red
-                missingEntriesDiv.appendChild(entryDiv);
-            });
-
-            // Append missingEntriesDiv to the container
-            container.appendChild(missingEntriesDiv);
-        } else {
-            console.error("No missing entries to display.");
-        }
-    } else {
-        console.error("Container not found on the webpage.");
-    }
-}
-
-// Function to format date to DD.MM.YYYY
-function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-}
 
 // Function to count unique lessons in entriesInTimetable per date and journalId
 function countLessonsInTimetable(date: string, journalId: number): number {
@@ -379,4 +335,168 @@ function countLessonsInTimetable(date: string, journalId: number): number {
     });
 
     return uniqueLessons.size;
+}
+
+// Function to get current journalId from the edit page
+function getCurrentJournalIdFromEditPage(): number | null {
+    const url = window.location.href;
+    const match = url.match(/\/journal\/(\d+)\/edit/);
+
+    if (match && match[1]) {
+        console.log("JournalId found in the URL:", parseInt(match[1], 10));
+        return parseInt(match[1], 10);
+    } else {
+        console.error("JournalId not found in the URL.");
+        return null;
+    }
+}
+
+// Function to display missingEntriesInJournal and missingEntriesInTimetable on the webpage
+function displayMissingEntriesInJournalAndTimetable(
+    missingEntriesInJournal: { date: string, journalId: number, countLessonsInTimetable: number }[],
+    missingEntriesInTimetable: { date: string, journalId: number }[],
+    mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[]
+): void {
+    const currentJournalId = getCurrentJournalIdFromEditPage();
+    const container = document.querySelector('.ois-form-layout-padding') as HTMLElement | null;
+
+    if (container) {
+        // Display missingEntriesInJournal
+        displayMissingEntriesInJournal(container, missingEntriesInJournal, currentJournalId);
+
+        // Display missingEntriesInTimetable
+        displayMissingEntriesInTimetable(container, missingEntriesInTimetable, currentJournalId);
+
+        // Display mismatchingLessons
+        displayMismatchingLessons(container, mismatchingLessons, currentJournalId);
+    } else {
+        console.error("Container not found on the webpage.");
+    }
+}
+
+
+// Function to display missingEntriesInJournal on the webpage
+function displayMissingEntriesInJournal(
+    container: HTMLElement,
+    missingEntriesInJournal: { date: string, journalId: number, countLessonsInTimetable: number }[],
+    currentJournalId: number | null
+): void {
+    if (currentJournalId === null) {
+        console.error("Cannot determine current journalId from the URL.");
+        return;
+    }
+
+    const missingEntriesDiv = document.createElement('div');
+    missingEntriesDiv.className = 'missing-entries';
+
+    // Filter and map the dates for the current journalId
+    const dateMessages = missingEntriesInJournal
+        .filter(entry => entry.journalId === currentJournalId)
+        .map(entry => formatDate(entry.date));
+
+    // Create and append content to the missingEntriesDiv
+    if (dateMessages.length > 0) {
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Sissekandmata tunnid (Journal):';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.color = 'red'; // Set the title text color to red
+        missingEntriesDiv.appendChild(titleDiv);
+
+        dateMessages.forEach(dateMessage => {
+            const entryDiv = document.createElement('div');
+            entryDiv.textContent = dateMessage;
+            entryDiv.style.color = 'red'; // Set the text color to red
+            missingEntriesDiv.appendChild(entryDiv);
+        });
+    } else {
+        console.error("No missing entries in Journal to display for the current journal.");
+    }
+
+    // Append missingEntriesDiv to the container
+    container.appendChild(missingEntriesDiv);
+}
+
+// Function to display missingEntriesInTimetable on the webpage
+function displayMissingEntriesInTimetable(
+    container: HTMLElement,
+    missingEntriesInTimetable: { date: string, journalId: number }[],
+    currentJournalId: number | null
+): void {
+    if (currentJournalId === null) {
+        console.error("Cannot determine current journalId from the URL.");
+        return;
+    }
+
+    const missingEntriesDiv = document.createElement('div');
+    missingEntriesDiv.className = 'missing-entries';
+
+    // Filter and map the dates for the current journalId
+    const dateMessages = missingEntriesInTimetable
+        .filter(entry => entry.journalId === currentJournalId)
+        .map(entry => formatDate(entry.date));
+
+    // Create and append content to the missingEntriesDiv
+    if (dateMessages.length > 0) {
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Vaste tunniplaanis puudub (Timetable):';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.color = 'red'; // Set the title text color to red
+        missingEntriesDiv.appendChild(titleDiv);
+
+        dateMessages.forEach(dateMessage => {
+            const entryDiv = document.createElement('div');
+            entryDiv.textContent = dateMessage;
+            entryDiv.style.color = 'red'; // Set the text color to red
+            missingEntriesDiv.appendChild(entryDiv);
+        });
+    } else {
+        console.error("No missing entries in Timetable to display for the current journal.");
+    }
+
+    // Append missingEntriesDiv to the container
+    container.appendChild(missingEntriesDiv);
+}
+
+// Function to display mismatchingLessons on the webpage
+function displayMismatchingLessons(
+    container: HTMLElement,
+    mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[],
+    currentJournalId: number | null
+): void {
+    // Filter mismatchingLessons for the current journalId
+    const mismatchingLessonsForCurrentJournal = mismatchingLessons
+        .filter(entry => entry.journalId === currentJournalId);
+
+    if (mismatchingLessonsForCurrentJournal.length > 0) {
+        const mismatchingLessonsDiv = document.createElement('div');
+        mismatchingLessonsDiv.className = 'mismatching-lessons';
+
+        // Create and append content to the mismatchingLessonsDiv
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Erinevus sissekannetes:';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.color = 'red'; // Set the title text color to red
+        mismatchingLessonsDiv.appendChild(titleDiv);
+
+        mismatchingLessonsForCurrentJournal.forEach(entry => {
+            const entryDiv = document.createElement('div');
+            entryDiv.textContent = `${formatDate(entry.date)} - Timetable Lessons: ${entry.timetableLessons}, Journal Lessons: ${entry.journalLessons}`;
+            entryDiv.style.color = 'red'; // Set the text color to red
+            mismatchingLessonsDiv.appendChild(entryDiv);
+        });
+
+        // Append mismatchingLessonsDiv to the container
+        container.appendChild(mismatchingLessonsDiv);
+    } else {
+        console.error("No mismatching lessons to display for the current journal.");
+    }
+}
+
+// Function to format date to DD.MM.YYYY
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
 }
