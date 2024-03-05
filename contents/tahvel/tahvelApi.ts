@@ -1,12 +1,15 @@
+import axios from 'axios';
+import type { AxiosResponse } from 'axios';
+
 // @ts-ignore
 import type {
     Database,
     Journal,
     JournalEntryApiResponse,
+    EntryInTimetable,
     TimetableByTeacherResponse,
     TimetableEventApiResponse
 } from './types';
-
 
 // Save current URL to variable
 const currentUrl: string = window.location.href;
@@ -217,7 +220,7 @@ async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
                     id: entry.id,
                 });
             });
-           }
+        }
         compareTimetableAndJournalEntries(journal);
     } catch (error) {
         console.error(`Error fetching journal entries: ${error}`);
@@ -406,6 +409,159 @@ function displayMissingEntriesInJournal(
             const entryDiv = document.createElement('div');
             entryDiv.textContent = dateMessage;
             entryDiv.style.color = 'red'; // Set the text color to red
+
+            // Create a button element
+            const button = document.createElement('button');
+            button.className = 'md-raised md-primary md-button md-ink-ripple';
+            button.textContent = 'Lisa'; // Set the text content of the button if needed
+
+            // Attach event listener to the button
+            button.addEventListener('click', async () => {
+                const dateToSearch = dateMessage; // Date format: YYYY-MM-DD
+                const convertedDate: string = dateToSearch.split('.').reverse().join('-') + 'T00:00:00Z';
+                const selectedJournalIds = [currentJournalId];
+
+                const result = selectedJournalIds.map(journalId => {
+                    const journal = cache.journals.find(journal => journal.id === journalId);
+                    const relevantEntries: EntryInTimetable[] = journal?.entriesInTimetable.filter(entry => entry.date.startsWith(convertedDate)) || [];
+
+                    return {
+                        journalId: journalId,
+                        date: convertedDate,
+                        number: relevantEntries.length > 0 ? Math.min(...relevantEntries.map(entry => entry.number || 0)) : null,
+                        lessons: relevantEntries.length
+                    };
+                });
+
+                console.log("URM: ", result);
+                const userData = await getUserData();
+                const teacherId = userData.teacherId;
+                
+                let data = {
+                    "journalId": result[0]?.journalId,
+                    "startLessonNr": result[0]?.number,
+                    "lessons": result[0]?.lessons,
+                    "entryType": "SISSEKANNE_T",
+                    "nameEt": "Tund",
+                    "entryDate": result[0]?.date,
+                    "content": "TUND!!!",
+                    "journalEntryStudents": [],
+                    "journalEntryCapacityTypes": [
+                        "MAHT_a"
+                    ],
+                    "journalEntryTeachers": [
+                        // "20659",
+                        teacherId
+                    ]
+                };
+
+                let journalIdx = result[0]?.journalId;
+
+                console.log(`Data(${journalIdx}) :`, data);
+
+                // Call postJournalEntry function on button click
+                await postJournalEntry(data);
+            });
+
+            // Call this function to reload the page
+            function reloadPage() {
+                window.location.reload();
+            }
+
+            async function postJournalEntry(data: any): Promise<void> {
+                try {
+                    const response: AxiosResponse = await axios.post(`${baseUrl}hois_back/journals/${data.journalId}/journalEntry`, data);
+                    console.log(`Response (${data.journalId}):`, response.data);
+                    // Handle response
+
+                    // After successful POST request, send multiple GET requests
+                    await Promise.all([
+                        getAndUpdateUsedHours(data),
+                        // getUsedHours(),
+                        getJournalStudents(data),
+                        getJournalEntriesByDate(data),
+                        getJournalEntry(data)
+                    ]);
+
+                    // Reload the page after all operations are completed
+                    reloadPage();
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle error
+                }
+            }
+
+            // Function to update the displayed used hours
+            function updateUsedHoursOnPage(usedHoursData: any): void {
+                const capacityHours = usedHoursData.capacityHours;
+
+                // Iterate through capacityHours data and update the corresponding elements on the page
+                capacityHours.forEach((capacityHour: any) => {
+                    const capacity = capacityHour.capacity;
+                    const usedHours = capacityHour.usedHours;
+
+                    // Find the elements on the page corresponding to the capacity and update their content
+                    const elementsToUpdate = document.querySelectorAll(`span:contains('${capacity}:') + span`);
+                    elementsToUpdate.forEach((element: HTMLElement) => {
+                        // Update the content of the element
+                        element.textContent = `${capacityHour.plannedHours}/${usedHours}`;
+                    });
+                });
+            }
+
+            // Function to get used hours data and update the displayed used hours on the page
+            async function getAndUpdateUsedHours(data: any): Promise<void> {
+                try {
+                    const response: AxiosResponse = await axios.get(`${baseUrl}hois_back/journals/${data.journalId}/usedHours`);
+                    console.log('Used Hours Response:', response.data);
+
+                    // Update the displayed used hours on the page
+                    updateUsedHoursOnPage(response.data);
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle error
+                }
+            }
+            // Function to send GET request for journalStudents
+            async function getJournalStudents(data: any): Promise<void> {
+                try {
+                    const response: AxiosResponse = await axios.get(`${baseUrl}hois_back/journals/${data.journalId}/journalStudents?allStudents=false`);
+                    console.log('Journal Students Response:', response.data);
+                    // Handle response
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle error
+                }
+            }
+
+            // Function to send GET request for journalEntriesByDate
+            async function getJournalEntriesByDate(data: any): Promise<void> {
+                try {
+                    const response: AxiosResponse = await axios.get(`${baseUrl}hois_back/journals/${data.journalId}/journalEntriesByDate?allStudents=false`);
+                    console.log('Journal Entries By Date Response:', response.data);
+                    // Handle response
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle error
+                }
+            }
+
+            // Function to send GET request for journalEntry
+            async function getJournalEntry(data: any): Promise<void> {
+                try {
+                    const response: AxiosResponse = await axios.get(`${baseUrl}hois_back/journals/${data.journalId}/journalEntry?lang=ET&page=0&size=20`);
+                    console.log('Journal Entry Response:', response.data);
+                    // Handle response
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle error
+                }
+            }
+
+            // Append the button element to the entryDiv
+            entryDiv.appendChild(button);
+
             missingEntriesDiv.appendChild(entryDiv);
         });
     } else {
@@ -500,3 +656,5 @@ function formatDate(dateString: string): string {
     const year = date.getFullYear();
     return `${day}.${month}.${year}`;
 }
+
+console.log("Cache:", cache);
