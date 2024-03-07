@@ -6,7 +6,7 @@
   "author": " Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.",
   "packageManager": "pnpm@7.5.0",
   "scripts": {
-    "dev": "plasmo dev",
+    "dev": "pnpm i && plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package"
   },

@@ -11,6 +11,28 @@ import type {
     TimetableEventApiResponse
 } from './types';
 
+let timeoutId = null;
+
+const pageActionsConfig = [
+    {
+        pageIndicator: '#/journals?_menu',
+        selector: '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a',
+        action: injectJournalPageComponents // Function to inject components on the journals page
+    },
+    // Template for adding more page configurations
+    {
+        pageIndicator: '#/anotherPage',
+        selector: '#another-selector',
+        action: injectJournalPageComponents // Function for another page's component injection
+    }
+];
+
+function injectJournalPageComponents() {
+    // Logic for injecting journal-specific components
+    console.log('Injecting journal-specific components...');
+    console.log(document.querySelectorAll('#main-content > div.layout-padding > div > md-table-container > table > tbody > tr:nth-child(5) > td:nth-child(2) > a'));
+}
+
 // Save current URL to variable
 const currentUrl: string = window.location.href;
 
@@ -42,8 +64,11 @@ async function fetchTimetableStudyYears() {
     const timetableStudyYears = await response.json();
 
     if (timetableStudyYears.length > 0) {
+
+        // TODO: Remove the hardcoded date and uncomment the line below
         // const firstStartDate = timetableStudyYears[0].startDate;
         const firstStartDate = "2023-07-31T00:00:00Z"; // 2023-07-31T00:00:00Z for testing
+
         const lastEndDate = timetableStudyYears[timetableStudyYears.length - 1].endDate;
 
         console.log("First Start Date:", firstStartDate);
@@ -436,7 +461,7 @@ function displayMissingEntriesInJournal(
                 console.log("URM: ", result);
                 const userData = await getUserData();
                 const teacherId = userData.teacherId;
-                
+
                 let data = {
                     "journalId": result[0]?.journalId,
                     "startLessonNr": result[0]?.number,
@@ -647,6 +672,72 @@ function displayMismatchingLessons(
         console.error("No mismatching lessons to display for the current journal.");
     }
 }
+
+function runActionAfterTimeout(action) {
+
+    // Cancel the previous timeout if it exists
+    if (timeoutId) {
+        console.log('Cancelling previous timeout...');
+        clearTimeout(timeoutId);
+    }
+
+    // Set timeout to ensure that the action is executed after the DOM is updated
+    timeoutId = setTimeout(() => {
+        console.log('Detected target elements. Executing action...');
+        action();
+    }, 100);
+}
+
+function observeAndActOnPageChanges() {
+    console.log('Observing page changes for dynamic component injection...');
+
+    // Enhance SPA navigation to dynamically execute actions based on URL changes
+    function enhanceSPAHistoryNavigation() {
+        const originalPushState = history.pushState;
+        history.pushState = function (...args) {
+            originalPushState.apply(this, args);
+            executeActionsBasedOnURL();
+        };
+        window.addEventListener('popstate', executeActionsBasedOnURL);
+    }
+
+    // Execute actions based on the current URL and configuration
+    function executeActionsBasedOnURL() {
+        const currentUrl = window.location.href;
+        pageActionsConfig.forEach(config => {
+            if (currentUrl.includes(config.pageIndicator)) {
+                const targets = document.querySelectorAll(config.selector);
+                if (targets.length) {
+                    runActionAfterTimeout(config.action);
+
+                } else {
+                    setUpDOMMutationObserver(config.selector, config.action);
+                }
+            }
+        });
+    }
+
+    // Set up a MutationObserver to detect and act on DOM changes
+    function setUpDOMMutationObserver(selector, action) {
+        const observer = new MutationObserver(() => {
+            const targets = document.querySelectorAll(selector);
+            if (targets.length) {
+                console.log('Detected target elements. Executing action...');
+                runActionAfterTimeout(action);
+                console.log('Disconnecting observer...');
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    window.onload = () => {
+        console.log('Window loaded. Checking for actions to execute...');
+        executeActionsBasedOnURL();
+        enhanceSPAHistoryNavigation();
+    };
+}
+observeAndActOnPageChanges();
 
 // Function to format date to DD.MM.YYYY
 function formatDate(dateString: string): string {
