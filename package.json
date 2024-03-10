@@ -20,7 +20,7 @@
     "@tsconfig/svelte": "^5.0.2",
     "@types/chrome": "^0.0.237",
     "@types/node": "^20.11.19",
-    "plasmo": "^0.84.2",
+    "plasmo": "^0.85.0",
     "prettier": "^2.8.8",
     "typescript": "^5.3.3"
   },

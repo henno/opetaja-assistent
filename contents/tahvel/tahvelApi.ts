@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 
-// @ts-ignore
 import type {
     Database,
     Journal,
@@ -13,10 +12,13 @@ import type {
 
 let timeoutId = null;
 
+// Define the selector for the journal elements
+let journalsElements = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
+
 const pageActionsConfig = [
     {
         pageIndicator: '#/journals?_menu',
-        selector: '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a',
+        selector: `${journalsElements} > td:nth-child(2) > a`,
         action: injectJournalPageComponents // Function to inject components on the journals page
     },
     // Template for adding more page configurations
@@ -30,7 +32,75 @@ const pageActionsConfig = [
 function injectJournalPageComponents() {
     // Logic for injecting journal-specific components
     console.log('Injecting journal-specific components...');
-    console.log(document.querySelectorAll('#main-content > div.layout-padding > div > md-table-container > table > tbody > tr:nth-child(5) > td:nth-child(2) > a'));
+
+    // Get all elements matching the selector
+    let elements = document.querySelectorAll(`${journalsElements}`);
+
+    // Get the index of the last element in the NodeList
+    let journalLastIndex = elements.length;
+
+    const journalsByTeacher = [];
+
+    // Loop through the elements from 1 to 4
+    for (let i = 1; i <= journalLastIndex; i++) {
+        // Construct the CSS selector to target the specific tr element
+        const selector = `${journalsElements}:nth-child(${i}) > td:nth-child(2) > a`;
+
+        // Query the element using the constructed selector
+        const element = document.querySelector(selector) as HTMLAnchorElement;
+
+        // console.log("Element:", element);
+
+        // Check if element exists
+        if (element) {
+            // Extract href, hash and innerText and store in cache
+            // const href = element.href;
+            const hash = element.hash;
+            console.log("Hash:", hash);
+
+            // Extract journalId from the hash using regular expressions
+            const matches = hash.match(/\/journal\/(\d+)\/edit/);
+            const journalId = matches ? parseInt(matches[1]) : null;
+
+            // const innerText = element.innerText;
+            // console.log("JournalId:", journalId, "innerText:", innerText);
+
+            // Find the journal object from the cache based on journalId
+            const journal = cache.journals.find(journal => journal.id === journalId);
+
+            // Check if the journal object is found
+            if (journal) {
+                journalsByTeacher.push(journal);
+            } else {
+                console.error('Journal not found in cache for journalId:', journalId);
+            }
+
+            // Check if journalId is in mismatchedJournalIds
+            if (mismatchedJournalIds.has(journalId)) {
+                // Create and style the span element
+                const span = document.createElement('span');
+                span.style.borderRadius = '4px';
+                span.style.color = 'white';
+                span.style.backgroundColor = 'red';
+                span.style.padding = '4px';
+                span.style.marginLeft = '5px';
+                span.innerText = '!!!';
+
+                // Insert the span element after the current element
+                element.parentNode.insertBefore(span, element.nextSibling);
+            }
+
+        }
+    }
+
+    // Output the cached data
+    console.log("journalsByTeacher", journalsByTeacher);
+
+    // countEntries(journalsByTeacher);
+    console.log(document.querySelectorAll(`${journalsElements}:nth-child(${journalLastIndex}) > td:nth-child(2) > a`));
+
+    console.log("Mismatched Journal IDs:", mismatchedJournalIds);
+
 }
 
 // Save current URL to variable
@@ -252,7 +322,7 @@ async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
     }
 }
 
-
+// TODO: we should update data in the cache after POST request
 function updateJournalEntriesInCache(journalId: number, entries: JournalEntryApiResponse[]): void {
     cache.journals = entries.map(entry => {
         const journal = cache.journals.find(j => j.id === entry.id) || createNewJournal(journalId, entry.nameEt);
@@ -277,12 +347,15 @@ function createNewJournal(id: number, nameEt: string): Journal {
     };
 }
 
+// Define mismatchedJournalIds as a global variable
+const mismatchedJournalIds: Set<number> = new Set();
+const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
+
 // Function to compare entriesInTimetable and entriesInJournal
 function compareTimetableAndJournalEntries(journal: Journal): void {
     const matchingDates: { date: string, journalId: number }[] = [];
     const missingEntriesInJournalMap: Map<string, { date: string, journalId: number, countLessonsInTimetable: number }> = new Map();
     const missingEntriesInTimetable: { date: string, journalId: number }[] = [];
-    const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
 
     // Filter entries in entriesInJournal with entryType: 'SISSEKANNE_T'
     const relevantEntriesInJournal = journal.entriesInJournal.filter(entry => entry.entryType === 'SISSEKANNE_T');
@@ -315,8 +388,10 @@ function compareTimetableAndJournalEntries(journal: Journal): void {
                     journalLessons: entry.lessons,
                     journalId: journal.id,
                 });
+                mismatchedJournalIds.add(journal.id); // Add mismatched journalId to the dataset
             }
         }
+
     });
 
     // Check for lessons in entriesInTimetable not present in entriesInJournal
@@ -344,8 +419,15 @@ function compareTimetableAndJournalEntries(journal: Journal): void {
 
     // Call this function after fetching and comparing data
     displayMissingEntriesInJournalAndTimetable(missingEntriesInJournal, missingEntriesInTimetable, mismatchingLessons);
+
+    // anotherFunction(); // Call anotherFunction here since we want to call it after the comparison
 }
 
+// console.log("Mismatched Journal IDs:", mismatchedJournalIds);
+// // Another function where you want to use mismatchedJournalIds
+// function anotherFunction(): void {
+//     console.log("Mismatched Journal IDs:", Array.from(mismatchedJournalIds));
+// }
 
 // Function to count unique lessons in entriesInTimetable per date and journalId
 function countLessonsInTimetable(date: string, journalId: number): number {
