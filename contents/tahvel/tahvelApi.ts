@@ -1,16 +1,18 @@
+import type {AxiosResponse} from 'axios';
 import axios from 'axios';
-import type { AxiosResponse } from 'axios';
 
 import type {
     Database,
+    EntryInTimetable,
     Journal,
     JournalEntryApiResponse,
-    EntryInTimetable,
     TimetableByTeacherResponse,
-    TimetableEventApiResponse
+    TimetableEventApiResponse,
 } from './types';
 
 let timeoutId = null;
+let teacherId: number;
+let teacherName: string;
 
 // Define the selector for the journal elements
 let journalsElements = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
@@ -119,13 +121,14 @@ function extractBaseUrl(url: string): string {
 const baseUrl: string = extractBaseUrl(currentUrl);
 
 // Function to get teacher and school data
-async function getUserData(): Promise<{ schoolId: number, teacherId: number }> {
+async function getUserData(): Promise<{ schoolId: number, teacherId: number, teacherName: string  }> {
     const response = await fetch(`${baseUrl}hois_back/user`);
     const data = await response.json();
     const schoolId = data.school.id; // 9 = Viljandi Kutseõppekeskus
-    // const teacherId = data.teacher;
-    const teacherId = 18737; // Teacher Henno Täht for testing
-    return { schoolId, teacherId };
+    //teacherId = data.teacher;
+    teacherId = 18737; // Teacher Henno Täht for testing purposes only
+    teacherName = data.fullName;
+    return { schoolId, teacherId, teacherName };
 }
 
 // Function to get timetable study years - startDate from the first study year and endDate from the last study year
@@ -232,7 +235,7 @@ const cache: Database = {
             timeStart: "19:30",
             timeEnd: "20:15"
         }
-    ]
+    ],
 };
 
 // Function to update cache with timetable events
@@ -295,8 +298,6 @@ function updateTimetableEventsInCache(events: TimetableEventApiResponse[]): void
         });
     });
 }
-
-
 async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
     const url = `${baseUrl}hois_back/journals/${journalId}/journalEntriesByDate`;
     try {
@@ -315,13 +316,95 @@ async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
                     id: entry.id,
                 });
             });
+            // Fetch and add journal students to cache
+            const students = await getJournalStudents(journalId); // Fetch students here
+            addJournalStudentsToCache(journalId, students);
+
+            // Fetch and add studentOutcomeResults to cache
+            const studentOutcomeResults = await getStudentOutcomeResults(journalId); // Fetch studentOutcomeResults here
+            console.log("Grouped Student Outcome Results:", studentOutcomeResults);
         }
         compareTimetableAndJournalEntries(journal);
+        compareStudentOutcomeResultsWithJournalStudents(journal);
     } catch (error) {
         console.error(`Error fetching journal entries: ${error}`);
     }
 }
 
+// Function to get student data
+async function getJournalStudents(journalId: number): Promise<any[]> {
+    const url = `${baseUrl}hois_back/journals/${journalId}/journalStudents?allStudents=false`;
+    try {
+        const response = await fetch(url);
+        // console.log("Journal Students:", data);
+        return await response.json(); // Return the fetched students
+    } catch (error) {
+        console.error(`Error fetching journal students: ${error}`);
+        return []; // Return an empty array or handle the error accordingly
+    }
+}
+
+// Function to add student data to the cache
+function addJournalStudentsToCache(journalId: number, students: any[]): void {
+    const journal = cache.journals.find(j => j.id === journalId);
+    if (journal) {
+        journal.students = students.map(student => {
+            return {
+                id: student.id,
+                studentId: student.studentId,
+                fullname: student.fullname,
+                status: student.status,
+            };
+        });
+    }
+}
+
+// Function to get studentOutcomeResults data
+async function getStudentOutcomeResults(journalId: number): Promise<{}> {
+    const url = `${baseUrl}hois_back/journals/${journalId}/journalEntriesByDate?allStudents=false`;
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log("Student Outcome Results:", data);
+
+        // Filter data based on the conditions (entryDate: null and entryType: SISSEKANNE_O or SISSEKANNE_T)
+        const filteredData = data.filter(entry => entry.entryDate === null && (entry.entryType === "SISSEKANNE_O" || entry.entryType === "SISSEKANNE_T"));
+
+        // Extract studentOutcomeResults from the nested structure
+        const studentOutcomeResults = filteredData.reduce((results, entry) => {
+            if (entry.studentOutcomeResults) {
+                Object.keys(entry.studentOutcomeResults).forEach(studentId => {
+                    const result = entry.studentOutcomeResults[studentId];
+                    const curriculumModuleOutcomes = entry.curriculumModuleOutcomes; // Include curriculumModuleOutcomes
+
+                    // Group by curriculumModuleOutcomes
+                    if (!results[curriculumModuleOutcomes]) {
+                        results[curriculumModuleOutcomes] = [];
+                    }
+
+                    results[curriculumModuleOutcomes].push({
+                        id: result.id,
+                        studentId: result.studentId,
+                        curriculumModuleOutcomes,
+                        grade: result.grade,
+                    });
+                });
+            }
+            return results;
+        }, {});
+
+    // Add the grouped studentOutcomeResults directly to the cache
+        const journal = cache.journals.find(j => j.id === journalId);
+        if (journal) {
+            journal.studentOutcomeResults = studentOutcomeResults;
+        }
+
+        return studentOutcomeResults;
+    } catch (error) {
+        console.error(`Error fetching studentOutcomeResults: ${error}`);
+        return {}; // Return an empty object or handle the error accordingly
+    }
+}
 // TODO: we should update data in the cache after POST request
 function updateJournalEntriesInCache(journalId: number, entries: JournalEntryApiResponse[]): void {
     cache.journals = entries.map(entry => {
@@ -343,7 +426,9 @@ function createNewJournal(id: number, nameEt: string): Journal {
         id: id,
         nameEt: nameEt,
         entriesInTimetable: [],
-        entriesInJournal: []
+        entriesInJournal: [],
+        students: [],
+        studentOutcomeResults: [],
     };
 }
 
@@ -423,12 +508,6 @@ function compareTimetableAndJournalEntries(journal: Journal): void {
     // anotherFunction(); // Call anotherFunction here since we want to call it after the comparison
 }
 
-// console.log("Mismatched Journal IDs:", mismatchedJournalIds);
-// // Another function where you want to use mismatchedJournalIds
-// function anotherFunction(): void {
-//     console.log("Mismatched Journal IDs:", Array.from(mismatchedJournalIds));
-// }
-
 // Function to count unique lessons in entriesInTimetable per date and journalId
 function countLessonsInTimetable(date: string, journalId: number): number {
     const uniqueLessons = new Set<number>();
@@ -483,7 +562,6 @@ function displayMissingEntriesInJournalAndTimetable(
         console.error("Container not found on the webpage.");
     }
 }
-
 
 // Function to display missingEntriesInJournal on the webpage
 function displayMissingEntriesInJournal(
@@ -830,4 +908,74 @@ function formatDate(dateString: string): string {
     return `${day}.${month}.${year}`;
 }
 
-console.log("Cache:", cache);
+console.log("Cache content:", cache);
+
+let buttonAdded = false;
+let missingStudents: any[] = [];
+
+// Helper function to iterate over studentOutcomeResults
+function processStudentOutcomeResults(journal: Journal, action: (curriculumModuleOutcomes: string, students: any[]) => void): void {
+    const journalStudents = journal.students;
+    const studentOutcomeResults = journal.studentOutcomeResults;
+
+    Object.keys(studentOutcomeResults).forEach(curriculumModuleOutcomes => {
+        const students = studentOutcomeResults[curriculumModuleOutcomes];
+        const studentIds = students.map(student => student.studentId);
+
+        // Remove 'let' to avoid redeclaring missingStudents
+        missingStudents = journalStudents.filter(student => !studentIds.includes(student.studentId));
+
+        // Perform the provided action
+        action(curriculumModuleOutcomes, students);
+    });
+}
+
+// Function to compare each Grouped Student Outcome Results with the Journal Students
+function compareStudentOutcomeResultsWithJournalStudents(journal: Journal): void {
+    // Call the helper function with the compare action
+    processStudentOutcomeResults(journal, (curriculumModuleOutcomes, students) => {
+        console.log(`Missing Students for curriculumModuleOutcomes ${curriculumModuleOutcomes} :`, missingStudents);
+
+        // Call this function after fetching and comparing data
+        if (!buttonAdded && missingStudents.length > 0) {
+            addDisplayMissingStudentsButtonToPage(journal);
+            buttonAdded = true;
+        }
+    });
+}
+
+// Function to display missing students on the webpage for each Grouped Student Outcome Results
+function displayMissingStudentsOnPage(journal: Journal): void {
+    // Call the helper function with the display action
+    processStudentOutcomeResults(journal, (curriculumModuleOutcomes, students) => {
+        console.log(`Missing Students for curriculumModuleOutcomes ${curriculumModuleOutcomes}:`, missingStudents);
+    });
+}
+
+// Add a button to the page to display missing students per Grouped Student Outcome Results
+function addDisplayMissingStudentsButtonToPage(journal: Journal): void {
+    const container = document.querySelector('.ois-form-layout-padding') as HTMLElement | null;
+
+    if (container) {
+        const button = document.createElement('button');
+        button.className = 'md-raised md-primary md-button md-ink-ripple';
+        button.textContent = `Lisa puuduolevad hinded`;
+
+        // Attach event listener to the button
+        button.addEventListener('click', () => {
+            displayMissingStudentsOnPage(journal);
+        });
+
+        // Find the element with id 'journalEntriesByDate'
+        const targetElement = document.querySelector("#journalEntriesByDate");
+
+        // Insert the button next to the target element
+        if (targetElement) {
+            targetElement.insertAdjacentElement('beforebegin', button);
+        } else {
+            console.error("Target element not found on the webpage.");
+        }
+    } else {
+        console.error("Container not found on the webpage.");
+    }
+}
