@@ -101,10 +101,20 @@ const mismatchedJournalIds: Set<number> = new Set();
 const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
 
 
+// Extract base URL from example URLs
+const baseUrl: string = extractBaseUrl();
+// Function to extract base URL
+function extractBaseUrl(): string {
+    const url = window.location.href;
+    const hashIndex = url.indexOf('#');
+    return url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
+}
+
+
 /** MAIN CODE **/
 (async () => {
     try {
-        throw new DetailedError(404, 'Not Found', 'The requested resource was not found.');
+        // throw new DetailedError(404, 'Not Found', 'The requested resource was not found.');
         setUpUrlChangeListener().then(r => console.log('URL change listener set up.'));
         const {schoolId, teacherId} = await getUserData()
         const {beginDate, endDate} = await fetchTimetableStudyYears(schoolId)
@@ -251,6 +261,10 @@ function get(endpoint: string) {
     return request('GET', endpoint);
 }
 
+function post(endpoint: string, body: object) {
+    return request('POST', endpoint, body);
+}
+
 function formatDate(dateString: string): string {
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
@@ -334,26 +348,22 @@ function injectJournalPageComponents() {
 
 }
 
-// Function to extract base URL
-function extractBaseUrl(): string {
-    const url = window.location.href;
-    const hashIndex = url.indexOf('#');
-    return url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
-}
-
+console.log(`${baseUrl}hois_back/user`);
 // Function to get teacher and school data
 async function getUserData(): Promise<{ schoolId: number, teacherId: number }> {
-    const userData = await api.get(`/user`);
-    const schoolId = userData.school.id; // 9 = Viljandi Kutseõppekeskus
+    const response = await get(`${baseUrl}hois_back/user`);
+    const schoolId = response.school.id; // 9 = Viljandi Kutseõppekeskus
     // const teacherId = data.teacher;
     // TODO: Remove the hardcoded teacherId and uncomment the line below before merging to the main branch
     const teacherId = 18737; // Teacher Henno Täht for testing
-    return {schoolId, teacherId};
+    console.log("SchoolId:", schoolId, "TeacherId:", teacherId);
+        return {schoolId, teacherId};
 }
 
 // Function to get timetable study years - startDate from the first study year and endDate from the last study year
 async function fetchTimetableStudyYears(schoolId): Promise<{ beginDate: string, endDate: string }> {
-    const timetableStudyYears = await api.get(`/timetables/timetableStudyYears/${schoolId}`);
+    const timetableStudyYears = await get(`${baseUrl}hois_back/timetables/timetableStudyYears/${schoolId}`);
+    // const userData = await timetableStudyYears.json();
 
     // Reject promise if there are no study years
     if (timetableStudyYears.length === 0) {
@@ -374,28 +384,32 @@ async function fetchTimetableStudyYears(schoolId): Promise<{ beginDate: string, 
 
 // Function to update cache with timetable events
 async function updateCacheWithTimetableEvents(schoolId: number, teacherId: number, from: string, thru: string): Promise<void> {
+    try {
+        const timetableEventsResponse = await get(`${baseUrl}hois_back/timetableevents/timetableByTeacher/${schoolId}?from=${from}&lang=ET&teachers=${teacherId}&thru=${thru}`);
+        console.log("Timetable Events Response:", timetableEventsResponse);
 
-    const timetableEventsResponse = await get(`/timetableevents/timetableByTeacher/${schoolId}?from=${from}&lang=ET&teachers=${teacherId}&thru=${thru}`);
+        // Check if timetableEvents exist directly under timetableEventsResponse
+        if (!timetableEventsResponse || !timetableEventsResponse.timetableEvents) {
+            console.error("Error: Timetable events data is missing or in unexpected format");
+            return;
+        }
 
-    // Filter out data where journalId is null
-    const filteredData = timetableEventsResponse.data.timetableEvents.filter(event => event.journalId !== null);
+        const filteredData = timetableEventsResponse.timetableEvents.filter(event => event.journalId !== null);
+        console.log("Filtered Data:", filteredData);
 
-    // console.log("Filtered Data:", filteredData);
+        updateTimetableEventsInCache(filteredData);
 
-    // debugger
-    updateTimetableEventsInCache(filteredData);
+        const uniqueJournalIds = Array.from(new Set(filteredData.map(event => event.journalId)));
+        console.log("uniqueJournalIds", uniqueJournalIds);
 
-    // Extract unique journalIds from the timetable events
-    const uniqueJournalIds = Array.from(new Set(filteredData.map(event => event.journalId)));
-    console.log("uniqueJournalIds", uniqueJournalIds);
-
-    // For each unique journalId, fetch and update cache with journal entries
-    for (const journalId of uniqueJournalIds) {
-        // @ts-ignore
-        await updateCacheWithJournalEntries(journalId);
+        for (const journalId of uniqueJournalIds) {
+            await updateCacheWithJournalEntries(journalId as number);
+        }
+    } catch (error) {
+        console.error("Error occurred while updating cache with timetable events:", error);
     }
-
 }
+
 
 function updateTimetableEventsInCache(events: TimetableEventApiResponse[]): void {
     events.forEach(event => {
@@ -423,9 +437,9 @@ function updateTimetableEventsInCache(events: TimetableEventApiResponse[]): void
 }
 
 async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
-    const url = `/journals/${journalId}/journalEntriesByDate`;
+    const url = `${baseUrl}hois_back/journals/${journalId}/journalEntriesByDate`;
     try {
-        const entries = await get<JournalEntryApiResponse[]>(url);
+        const entries = await get(url);
         // Find the corresponding journal in the cache
         const journal = cache.journals.find(j => j.id === journalId);
         if (journal) {
@@ -649,7 +663,7 @@ function displayMissingEntriesInJournal(
             button.className = 'md-raised md-primary md-button md-ink-ripple';
             button.textContent = 'Lisa'; // Set the text content of the button if needed
 
-            // Attach event listener to the button
+            // Attach event listener to the button to simulate button click and open modal
             button.addEventListener('click', async () => {
                 const dateToSearch = dateMessage; // Date format: YYYY-MM-DD
                 const convertedDate: string = dateToSearch.split('.').reverse().join('-') + 'T00:00:00Z';
@@ -693,103 +707,9 @@ function displayMissingEntriesInJournal(
 
                 console.log(`Data(${journalIdx}) :`, data);
 
-                // Call postJournalEntry function on button click
-                await postJournalEntry(data);
+                // Call simulateJournalEntry function on button click
+                await simulateJournalEntry(data);
             });
-
-            // Call this function to reload the page
-            function reloadPage() {
-                window.location.reload();
-            }
-
-            async function postJournalEntry(data: any): Promise<void> {
-                try {
-                    const response: AxiosResponse = await api.post(`/journals/${data.journalId}/journalEntry`, data);
-                    console.log(`Response (${data.journalId}):`, response.data);
-                    // Handle response
-
-                    // After successful POST request, send multiple GET requests
-                    await Promise.all([
-                        getAndUpdateUsedHours(data),
-                        // getUsedHours(),
-                        getJournalStudents(data),
-                        getJournalEntriesByDate(data),
-                        getJournalEntry(data)
-                    ]);
-
-                    // Reload the page after all operations are completed
-                    reloadPage();
-
-                } catch (error) {
-                    console.error('Error:', error);
-                    // Handle error
-                }
-            }
-
-            // Function to update the displayed used hours
-            function updateUsedHoursOnPage(usedHoursData: any): void {
-                const capacityHours = usedHoursData.capacityHours;
-
-                // Iterate through capacityHours data and update the corresponding elements on the page
-                capacityHours.forEach((capacityHour: any) => {
-                    const capacity = capacityHour.capacity;
-                    const usedHours = capacityHour.usedHours;
-
-                    // Find the elements on the page corresponding to the capacity and update their content
-                    const elementsToUpdate = document.querySelectorAll(`span:contains('${capacity}:') + span`);
-                    elementsToUpdate.forEach((element: HTMLElement) => {
-                        // Update the content of the element
-                        element.textContent = `${capacityHour.plannedHours}/${usedHours}`;
-                    });
-                });
-            }
-
-            // Function to get used hours data and update the displayed used hours on the page
-            async function getAndUpdateUsedHours(data: any): Promise<void> {
-                try {
-                    const response: AxiosResponse = await api.get(`/journals/${data.journalId}/usedHours`);
-                    console.log('Used Hours Response:', response.data);
-
-                    // Update the displayed used hours on the page
-                    updateUsedHoursOnPage(response.data);
-                } catch (error) {
-                    console.error('Error:', error);
-                    // Handle error
-                }
-            }
-
-            async function getJournalStudents(data: any): Promise<void> {
-                try {
-                    const response: AxiosResponse = await api.get(`/journals/${data.journalId}/journalStudents?allStudents=false`);
-                    console.log('Journal Students Response:', response.data);
-                    // Handle response
-                } catch (error) {
-                    console.error('Error:', error);
-                    // Handle error
-                }
-            }
-
-            async function getJournalEntriesByDate(data: any): Promise<void> {
-                try {
-                    const response: AxiosResponse = await api.get(`/journals/${data.journalId}/journalEntriesByDate?allStudents=false`);
-                    console.log('Journal Entries By Date Response:', response.data);
-                    // Handle response
-                } catch (error) {
-                    console.error('Error:', error);
-                    // Handle error
-                }
-            }
-
-            async function getJournalEntry(data: any): Promise<void> {
-                try {
-                    const response: AxiosResponse = await api.get(`/journals/${data.journalId}/journalEntry?lang=ET&page=0&size=20`);
-                    console.log('Journal Entry Response:', response.data);
-                    // Handle response
-                } catch (error) {
-                    console.error('Error:', error);
-                    // Handle error
-                }
-            }
 
             // Append the button element to the entryDiv
             entryDiv.appendChild(button);
@@ -803,6 +723,152 @@ function displayMissingEntriesInJournal(
     // Append missingEntriesDiv to the container
     container.appendChild(missingEntriesDiv);
 }
+
+// Placeholder function to simulate journal entry
+async function simulateJournalEntry(data: any): Promise<void> {
+    // Your simulation logic for journal entry goes here
+    console.log("Simulating journal entry with data:", data);
+    
+    // Once journal entry is simulated, trigger the modal to open
+    triggerModalOpening(data);
+}
+
+// Function to trigger the opening of the modal and prefill fields
+function triggerModalOpening(data: any): void {
+    // Find the element that triggers the modal opening and trigger its click event
+    const modalTriggerButton = document.querySelector('[ng-click="addNewEntry()"]') as HTMLElement;
+
+    if (modalTriggerButton) {
+        modalTriggerButton.click();
+
+        // Wait for a short delay before attempting to prefill the fields in the opened modal
+        setTimeout(() => prefillModalFields(data), 100); // Pass data to prefillModalFields
+    } else {
+        console.error("Modal trigger button not found.");
+    }
+}
+
+// Function to prefill fields in the opened modal
+function prefillModalFields(data: any): void {
+    // Prefill the entry type field
+    prefillEntryType();
+
+    // Prefill the date field
+    prefillDateField(data);
+}
+
+// Function to prefill the entry type field
+function prefillEntryType(): void {
+    // Select the md-input-container element within the modal for the select value
+    const inputContainerSelect = document.querySelector('#dialogContent_106 md-input-container') as HTMLElement;
+
+    if (inputContainerSelect) {
+        // Find the select value element within the input container
+        const selectValue = inputContainerSelect.querySelector('#select_value_label_94') as HTMLElement;
+
+        if (selectValue) {
+            // Click the select value element to open the options
+            selectValue.click();
+
+            // Wait for a short delay before selecting the option
+            setTimeout(() => {
+                // Find the option to select
+                const optionToSelect = document.querySelector('#select_option_123') as HTMLElement;
+
+                if (optionToSelect) {
+                    // Click the option to select it
+                    optionToSelect.click();
+
+                    // Wait for a short delay before selecting the checkbox
+                    setTimeout(preselectJournalEntryCapacityTypes, 100); // Adjust the delay as needed
+                } else {
+                    console.error("Option to select not found.");
+                }
+            }, 100); // Adjust the delay as needed
+        } else {
+            console.error("Select value element not found.");
+        }
+    } else {
+        console.error("Input container for select value not found.");
+    }
+}
+
+// Flag to track if the select element is already open
+let isSelectOpen = false;
+
+// Function to prefill the date field
+function prefillDateField(data: any): void {
+    // Log data.entryDate
+    console.log("Entry Date:", data.entryDate);
+
+    // Extract only the date portion from entryDate
+    const entryDate = new Date(data.entryDate).toISOString().split('T')[0];
+
+    // Select the select element directly
+    const selectElement = document.querySelector('#select_110') as HTMLSelectElement;
+
+    if (!selectElement) {
+        console.error("Select element not found.");
+        return;
+    }
+
+    // If the select element is already open, don't open it again
+    if (isSelectOpen) {
+        console.log("Select element is already open.");
+        return;
+    }
+
+    // Function to handle select open event
+    const handleSelectOpen = () => {
+        console.log("Select element opened.");
+        isSelectOpen = true;
+
+        // Log all option values
+        const options = document.querySelectorAll('#select_110 md-option');
+
+        let optionFound = false;
+        options.forEach((option: HTMLElement) => {
+            // Extract only the date portion from the option value
+            const optionValue = option.getAttribute('value')?.split('T')[0];
+
+            // Compare the date portions
+            if (entryDate === optionValue) {
+                // Click the option to select it
+                option.click();
+                optionFound = true;
+            }
+        });
+
+        if (!optionFound) {
+            console.error("Option with value matching entryDate not found.");
+        }
+
+        // Remove event listener once the select element is closed
+        document.removeEventListener('click', handleSelectOpen);
+        isSelectOpen = false;
+    };
+
+    // Attach event listener to detect when the select element is opened
+    document.addEventListener('click', handleSelectOpen);
+
+    // Click the select element to open it
+    selectElement.click();
+}
+
+
+// Function to preselect the journal entry capacity types
+function preselectJournalEntryCapacityTypes(): void {
+    // Find the checkbox element based on its aria-label
+    const checkbox = document.querySelector('md-checkbox[aria-label="Auditoorne õpe"]') as HTMLElement;
+
+    if (checkbox) {
+        // Click the checkbox to select it
+        checkbox.click();
+    } else {
+        console.error("Checkbox not found.");
+    }
+}
+
 
 // Function to display missingEntriesInTimetable on the webpage
 function displayMissingEntriesInTimetable(
