@@ -7,6 +7,8 @@ import type {Database, EntryInTimetable, Journal, JournalEntryApiResponse, Timet
 /** VARIABLES **/
 let timeoutId = null;
 let journalsElements = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
+let journalElement = '.ois-form-layout-padding';
+
 const cache: Database = {
     journals: [],
     lessonTimes: [
@@ -84,6 +86,7 @@ const cache: Database = {
         }
     ]
 };
+
 const pageActionsConfig = [
     {
         pageIndicator: '#/journals?_menu',
@@ -92,11 +95,12 @@ const pageActionsConfig = [
     },
     // Template for adding more page configurations
     {
-        pageIndicator: '#/anotherPage',
-        selector: '#another-selector',
-        action: injectJournalPageComponents // Function for another page's component injection
+        pageIndicator: '#/journal/301576/edit',
+        selector: `${journalElement}`,
+        action: injectJournalPageComponents2 // Function for another page's component injection
     }
 ];
+
 const mismatchedJournalIds: Set<number> = new Set();
 const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
 
@@ -348,7 +352,21 @@ function injectJournalPageComponents() {
 
 }
 
-console.log(`${baseUrl}hois_back/user`);
+function injectJournalPageComponents2(): void {
+    
+    const currentJournalId = getCurrentJournalIdFromEditPage();
+    const container = document.querySelector(`${journalElement}`) as HTMLElement | null;
+
+    if (container) {
+        // Display missingEntriesInJournal
+        updateCacheWithJournalEntries(currentJournalId);
+    } else {
+        console.error("Container not found on the webpage.");
+    }
+
+
+}
+
 // Function to get teacher and school data
 async function getUserData(): Promise<{ schoolId: number, teacherId: number }> {
     const response = await get(`${baseUrl}hois_back/user`);
@@ -445,16 +463,22 @@ async function updateCacheWithJournalEntries(journalId: number): Promise<void> {
         if (journal) {
             // Update the entriesInJournal array of the journal
             entries.forEach(entry => {
-                journal.entriesInJournal.push({
-                    entryDate: entry.entryDate,
-                    nameEt: entry.nameEt,
-                    entryType: entry.entryType,
-                    startLessonNr: entry.startLessonNr,
-                    lessons: entry.lessons,
-                    id: entry.id,
-                });
+                // Check if the entry already exists in the array
+                const existingEntry = journal.entriesInJournal.find(e => e.id === entry.id);
+                if (!existingEntry) {
+                    journal.entriesInJournal.push({
+                        entryDate: entry.entryDate,
+                        nameEt: entry.nameEt,
+                        entryType: entry.entryType,
+                        startLessonNr: entry.startLessonNr,
+                        lessons: entry.lessons,
+                        id: entry.id,
+                    });
+                }
             });
         }
+
+        console.log(`Journal EntriesXXX (${journalId}):`, entries);
         compareTimetableAndJournalEntries(journal);
     } catch (error) {
         console.error(`Error fetching journal entries: ${error}`);
@@ -495,6 +519,7 @@ function compareTimetableAndJournalEntries(journal: Journal): void {
         countLessonsInTimetable: number
     }> = new Map();
     const missingEntriesInTimetable: { date: string, journalId: number }[] = [];
+    const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[] = [];
 
     // Filter entries in entriesInJournal with entryType: 'SISSEKANNE_T'
     const relevantEntriesInJournal = journal.entriesInJournal.filter(entry => entry.entryType === 'SISSEKANNE_T');
@@ -724,6 +749,82 @@ function displayMissingEntriesInJournal(
     container.appendChild(missingEntriesDiv);
 }
 
+// Function to display missingEntriesInTimetable on the webpage
+function displayMissingEntriesInTimetable(
+    container: HTMLElement,
+    missingEntriesInTimetable: { date: string, journalId: number }[],
+    currentJournalId: number | null
+): void {
+    if (currentJournalId === null) {
+        console.error("Cannot determine current journalId from the URL.");
+        return;
+    }
+
+    const missingEntriesDiv = document.createElement('div');
+    missingEntriesDiv.className = 'missing-entries';
+
+    // Filter and map the dates for the current journalId
+    const dateMessages = missingEntriesInTimetable
+        .filter(entry => entry.journalId === currentJournalId)
+        .map(entry => formatDate(entry.date));
+
+    // Create and append content to the missingEntriesDiv
+    if (dateMessages.length > 0) {
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Vaste tunniplaanis puudub (Timetable):';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.color = 'red'; // Set the title text color to red
+        missingEntriesDiv.appendChild(titleDiv);
+
+        dateMessages.forEach(dateMessage => {
+            const entryDiv = document.createElement('div');
+            entryDiv.textContent = dateMessage;
+            entryDiv.style.color = 'red'; // Set the text color to red
+            missingEntriesDiv.appendChild(entryDiv);
+        });
+    } else {
+        console.error("No missing entries in Timetable to display for the current journal.");
+    }
+
+    // Append missingEntriesDiv to the container
+    container.appendChild(missingEntriesDiv);
+}
+
+// Function to display mismatchingLessons on the webpage
+function displayMismatchingLessons(
+    container: HTMLElement,
+    mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[],
+    currentJournalId: number | null
+): void {
+    // Filter mismatchingLessons for the current journalId
+    const mismatchingLessonsForCurrentJournal = mismatchingLessons
+        .filter(entry => entry.journalId === currentJournalId);
+
+    if (mismatchingLessonsForCurrentJournal.length > 0) {
+        const mismatchingLessonsDiv = document.createElement('div');
+        mismatchingLessonsDiv.className = 'mismatching-lessons';
+
+        // Create and append content to the mismatchingLessonsDiv
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Erinevus sissekannetes:';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.color = 'red'; // Set the title text color to red
+        mismatchingLessonsDiv.appendChild(titleDiv);
+
+        mismatchingLessonsForCurrentJournal.forEach(entry => {
+            const entryDiv = document.createElement('div');
+            entryDiv.textContent = `${formatDate(entry.date)} - Timetable Lessons: ${entry.timetableLessons}, Journal Lessons: ${entry.journalLessons}`;
+            entryDiv.style.color = 'red'; // Set the text color to red
+            mismatchingLessonsDiv.appendChild(entryDiv);
+        });
+
+        // Append mismatchingLessonsDiv to the container
+        container.appendChild(mismatchingLessonsDiv);
+    } else {
+        console.error("No mismatching lessons to display for the current journal.");
+    }
+}
+
 // Placeholder function to simulate journal entry
 async function simulateJournalEntry(data: any): Promise<void> {
     // Your simulation logic for journal entry goes here
@@ -759,38 +860,35 @@ function prefillModalFields(data: any): void {
 
 // Function to prefill the entry type field
 function prefillEntryType(): void {
-    // Select the md-input-container element within the modal for the select value
-    const inputContainerSelect = document.querySelector('#dialogContent_106 md-input-container') as HTMLElement;
+    console.log("prefillEntryType() called");
 
-    if (inputContainerSelect) {
-        // Find the select value element within the input container
-        const selectValue = inputContainerSelect.querySelector('#select_value_label_94') as HTMLElement;
+    setTimeout(() => {
+        // Select the md-option element directly based on its value attribute
+        const optionToSelect = document.querySelector('#dialogContent_70 md-option[value="SISSEKANNE_T"]') as HTMLElement;
 
-        if (selectValue) {
-            // Click the select value element to open the options
-            selectValue.click();
+        if (optionToSelect) {
+            console.log("Option to select found");
 
-            // Wait for a short delay before selecting the option
-            setTimeout(() => {
-                // Find the option to select
-                const optionToSelect = document.querySelector('#select_option_123') as HTMLElement;
+            // Click the option to select it
+            optionToSelect.click();
 
-                if (optionToSelect) {
-                    // Click the option to select it
-                    optionToSelect.click();
+            console.log("Option selected successfully");
 
-                    // Wait for a short delay before selecting the checkbox
-                    setTimeout(preselectJournalEntryCapacityTypes, 100); // Adjust the delay as needed
-                } else {
-                    console.error("Option to select not found.");
-                }
-            }, 100); // Adjust the delay as needed
+            // Find the md-select element and trigger a click event to close the dropdown
+            const mdSelect = document.querySelector('#select_59') as HTMLElement;
+            if (mdSelect) {
+                // Delay the click event on mdSelect to ensure the dropdown has fully closed
+                setTimeout(() => {
+                    mdSelect.click();
+                    console.log("md-select click event triggered");
+                }, 500); // Adjust the delay as needed
+            } else {
+                console.error("md-select element not found.");
+            }
         } else {
-            console.error("Select value element not found.");
+            console.error("Option to select not found.");
         }
-    } else {
-        console.error("Input container for select value not found.");
-    }
+    }, 500); // Adjust the delay as needed
 }
 
 // Flag to track if the select element is already open
@@ -869,82 +967,6 @@ function preselectJournalEntryCapacityTypes(): void {
     }
 }
 
-
-// Function to display missingEntriesInTimetable on the webpage
-function displayMissingEntriesInTimetable(
-    container: HTMLElement,
-    missingEntriesInTimetable: { date: string, journalId: number }[],
-    currentJournalId: number | null
-): void {
-    if (currentJournalId === null) {
-        console.error("Cannot determine current journalId from the URL.");
-        return;
-    }
-
-    const missingEntriesDiv = document.createElement('div');
-    missingEntriesDiv.className = 'missing-entries';
-
-    // Filter and map the dates for the current journalId
-    const dateMessages = missingEntriesInTimetable
-        .filter(entry => entry.journalId === currentJournalId)
-        .map(entry => formatDate(entry.date));
-
-    // Create and append content to the missingEntriesDiv
-    if (dateMessages.length > 0) {
-        const titleDiv = document.createElement('div');
-        titleDiv.textContent = 'Vaste tunniplaanis puudub (Timetable):';
-        titleDiv.style.fontWeight = 'bold';
-        titleDiv.style.color = 'red'; // Set the title text color to red
-        missingEntriesDiv.appendChild(titleDiv);
-
-        dateMessages.forEach(dateMessage => {
-            const entryDiv = document.createElement('div');
-            entryDiv.textContent = dateMessage;
-            entryDiv.style.color = 'red'; // Set the text color to red
-            missingEntriesDiv.appendChild(entryDiv);
-        });
-    } else {
-        console.error("No missing entries in Timetable to display for the current journal.");
-    }
-
-    // Append missingEntriesDiv to the container
-    container.appendChild(missingEntriesDiv);
-}
-
-// Function to display mismatchingLessons on the webpage
-function displayMismatchingLessons(
-    container: HTMLElement,
-    mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, journalId: number }[],
-    currentJournalId: number | null
-): void {
-    // Filter mismatchingLessons for the current journalId
-    const mismatchingLessonsForCurrentJournal = mismatchingLessons
-        .filter(entry => entry.journalId === currentJournalId);
-
-    if (mismatchingLessonsForCurrentJournal.length > 0) {
-        const mismatchingLessonsDiv = document.createElement('div');
-        mismatchingLessonsDiv.className = 'mismatching-lessons';
-
-        // Create and append content to the mismatchingLessonsDiv
-        const titleDiv = document.createElement('div');
-        titleDiv.textContent = 'Erinevus sissekannetes:';
-        titleDiv.style.fontWeight = 'bold';
-        titleDiv.style.color = 'red'; // Set the title text color to red
-        mismatchingLessonsDiv.appendChild(titleDiv);
-
-        mismatchingLessonsForCurrentJournal.forEach(entry => {
-            const entryDiv = document.createElement('div');
-            entryDiv.textContent = `${formatDate(entry.date)} - Timetable Lessons: ${entry.timetableLessons}, Journal Lessons: ${entry.journalLessons}`;
-            entryDiv.style.color = 'red'; // Set the text color to red
-            mismatchingLessonsDiv.appendChild(entryDiv);
-        });
-
-        // Append mismatchingLessonsDiv to the container
-        container.appendChild(mismatchingLessonsDiv);
-    } else {
-        console.error("No mismatching lessons to display for the current journal.");
-    }
-}
 
 function runActionAfterTimeout(action) {
 
