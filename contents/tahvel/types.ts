@@ -1,25 +1,33 @@
+export interface Database {
+    journals: Journal[];
+    lessonTimes: LessonTime[];
+}
+
+export interface Journal {
+    id: number;
+    nameEt: string;
+    hasDiscrepancy: boolean;
+    entriesInTimetable: EntryInTimetable[];
+    entriesInJournal: EntryInJournal[];
+    differences: Difference[];
+}
+
 export interface EntryInTimetable {
+    // count: any;
     id: number;
     date: string;
     timeStart: string;
     timeEnd: string;
-    number?: number; // Add the number property
+    number?: number;
 }
 
 export interface EntryInJournal {
     entryDate: string;
     nameEt: string;
     entryType: string;
-    startLessonNr: number | null;
     lessons: number;
+    lessonNumbers?: string;
     id: number;
-}
-
-export interface Journal {
-    id: number;
-    nameEt: string;
-    entriesInTimetable: EntryInTimetable[];
-    entriesInJournal: EntryInJournal[];
 }
 
 export interface LessonTime {
@@ -29,9 +37,8 @@ export interface LessonTime {
     note?: string;
 }
 
-export interface Database {
-    journals: Journal[];
-    lessonTimes: LessonTime[];
+export interface TimetableByTeacherResponse {
+    timetableEvents: TimetableEventApiResponse[];
 }
 
 export interface TimetableEventApiResponse {
@@ -43,15 +50,20 @@ export interface TimetableEventApiResponse {
     timeEnd: string;
 }
 
-export interface TimetableByTeacherResponse {
-    timetableEvents: TimetableEventApiResponse[];
-}
-
 export interface JournalEntryApiResponse {
     entryDate: string;
     nameEt: string;
     entryType: string;
-    startLessonNr: number | null;
     lessons: number;
     id: number;
+}
+
+export interface Difference {
+    date: string;
+    mismatch: boolean;
+    missing_E: boolean;
+    missing_J: boolean;
+    startLessonNr: number;
+    timetableCount: number;
+    lessonsInJournal: number;
 }
