@@ -672,7 +672,7 @@ async function updateCacheWithJournalEntries(journalId) {
             const startLessonNr = Math.min(...journal.entriesInTimetable.filter(entry => entry.date === date).map(entry => entry.number));
             const journalEntry = journal.entriesInJournal.find(entry => entry.entryDate === date && entry.entryDate !== null);
             const timetableCount = timetableCounts[date] || 0;
-            const lessonsInJournal = journalEntry ? journalEntry.lessons : 0;
+            const lessonsInJournal = journalEntry && journalEntry.entryType === "SISSEKANNE_T" ? journalEntry.lessons : 0;
             const mismatch = lessonsInJournal > 0 && timetableCount > 0 && lessonsInJournal !== timetableCount;
             const missing_E = lessonsInJournal > 0 && timetableCount === 0;
             const missing_J = timetableCount > 0 && lessonsInJournal === 0;
