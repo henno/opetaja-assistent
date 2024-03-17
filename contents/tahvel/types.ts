@@ -66,4 +66,5 @@ export interface Difference {
     startLessonNr: number;
     timetableCount: number;
     lessonsInJournal: number;
+    id: number;
 }

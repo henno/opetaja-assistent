@@ -76,3 +76,10 @@ export const cache: Database = {
         }
     ]
 };
+
+
+export function clearCache(): void {
+    // Clearing the cache
+    cache.journals = [];
+    console.log("Cache cleared.");
+}

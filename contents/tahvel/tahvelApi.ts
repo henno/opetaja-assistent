@@ -5,7 +5,7 @@ import { DetailedError } from '@utils/DetailedError';
 import type { Journal, TimetableEventApiResponse, Difference } from './types';
 
 /** Cache Data **/
-import { cache } from './cacheData';
+import { cache, clearCache } from './cacheData';
 
 /** VARIABLES **/
 let timeoutId = null;
@@ -14,10 +14,10 @@ let journalElement = '.ois-form-layout-padding';
 // Extract base URL from example URLs
 const baseUrl: string = extractBaseUrl();
 
-// Define pageActionsConfig array including someInfo
+// Define pageActionsConfig array
 const pageActionsConfig = [
     {
-        pageIndicator: '#/journals?_menu',
+        pageIndicator: ['#/journals', '#/journals?_menu'],
         selector: `${journalsElements} > td:nth-child(2) > a`,
         action: injectJournalPageComponents // Function to inject components on the journals page
     }
@@ -26,16 +26,8 @@ const pageActionsConfig = [
 /** MAIN CODE **/
 (async () => {
     try {
-        // throw new DetailedError(404, 'Not Found', 'The requested resource was not found.');
-        setUpUrlChangeListener().then(r => console.log('URL change listener set up.'));
-        const { schoolId, teacherId } = await getUserData()
-        const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId)
-        await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate)
-        console.log("Cache updated with timetable events.", cache)
-
-        const actionsInfo = pageActions();
-        // Now that actionsInfo is ready, populate pageActionsConfig
-        pageActionsConfig.push(...actionsInfo); // Append actionsInfo array to pageActionsConfig array        
+        // Call the main function wrapper
+        mainFunctionWrapper();
     } catch (e) {
         // General error handler (all errors in app should be caught and handled only here, unless they are expected)
         console.error(e);
@@ -44,6 +36,33 @@ const pageActionsConfig = [
         showMessage(e.message, e instanceof DetailedError ? e.title : 'Error');
     }
 })();
+
+async function mainFunctionWrapper() {
+    try {
+        // Main functionality code goes here
+        setUpUrlChangeListener().then(r => console.log('URL change listener set up.'));
+        const { schoolId, teacherId } = await getUserData()
+        const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId)
+        await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate)
+        console.log("Cache updated with timetable events.", cache)
+
+        // Call pageActions here and update pageActionsConfig
+        pageActionsConfig.push({
+            pageIndicator: pageActions(),
+            selector: `${journalElement}`,
+            action: injectJournalPageComponents2 // Function to inject components on the journals page
+        });
+
+        // Call injectJournalPageComponents directly to ensure it runs on page load/refresh
+        injectJournalPageComponents();
+        // Call injectJournalPageComponents2 directly to ensure it runs on page load/refresh
+        injectJournalPageComponents2();
+    } catch (e) {
+        // Error handling code goes here
+        console.error(e);
+        showMessage(e.message, e instanceof DetailedError ? e.title : 'Error');
+    }
+}
 
 /** FUNCTION DEFINITIONS **/
 
@@ -54,13 +73,9 @@ function extractBaseUrl(): string {
     return url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
 }
 
-// Function to create someInfo array based on cache.journals
+// Function to create actions array based on cache.journals
 function pageActions() {
-    return cache.journals.map(journal => ({
-        pageIndicator: `#/journal/${journal.id}/edit`,
-        selector: '.ois-form-layout-padding',
-        action: injectJournalPageComponents2
-    }));
+    return cache.journals.map(journal => `#/journal/${journal.id}/edit`);
 }
 
 function showMessage(title: string, message: string) {
@@ -313,7 +328,7 @@ function injectJournalPageComponents2(): void {
 function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
     const discrepanciesDiv = document.createElement('div');
     const missingJournalEntries: { date: string, timetableLessons: number, journalLessons: number, startLessonNr: number }[] = [];
-    const missingTimetableEntries: string[] = [];
+    const missingTimetableEntries: { id: number, date: string, timetableLessons: number, journalLessons: number, startLessonNr: number }[] = [];
     const mismatchingLessons: { date: string, timetableLessons: number, journalLessons: number, startLessonNr: number }[] = [];
 
     journal.differences.forEach(entry => {
@@ -328,7 +343,15 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
             missingJournalEntries.push(missingJournalEntry);
         }
         if (entry.missing_E) {
-            missingTimetableEntries.push(getFormattedDate(entry.date));
+            const formattedDate = getFormattedDate(entry.date);
+            const missingTimetableEntry = {
+                date: formattedDate,
+                timetableLessons: entry.timetableCount,
+                journalLessons: entry.lessonsInJournal,
+                startLessonNr: entry.startLessonNr,
+                id: entry.id
+            };
+            missingTimetableEntries.push(missingTimetableEntry);
         }
         if (entry.mismatch) {
             const formattedDate = getFormattedDate(entry.date);
@@ -343,6 +366,8 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
     });
 
     if (missingJournalEntries.length > 0 || missingTimetableEntries.length > 0 || mismatchingLessons.length > 0) {
+
+        // Add missing Journal entries to the discrepanciesDiv
         if (missingJournalEntries.length > 0) {
             const journalTitleDiv = document.createElement('div');
             journalTitleDiv.textContent = 'Sissekandmata tunnid (Journal):';
@@ -352,6 +377,9 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
 
             missingJournalEntries.forEach(date => {
                 const entryDiv = document.createElement('div');
+                // Inside the loop where you create entryDiv elements
+                entryDiv.id = `entry_${date.date}`; // Assign an ID to the div element based on the date
+
                 entryDiv.textContent = date.date; // Assign the 'date' property of the object to the 'textContent' property of 'entryDiv'
                 entryDiv.style.color = 'red';
 
@@ -361,36 +389,67 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
                 button.textContent = 'Lisa';
 
                 // Add event listener to the dynamically created button
-                button.addEventListener('click', () => {
+                button.addEventListener('click', async () => {
                     // Simulate a click event on the original button
                     const originalButton = document.querySelector('[ng-click="addNewEntry()"]') as HTMLButtonElement;
                     if (originalButton) {
                         originalButton.click();
 
                         // Call the prefillEntryType function and wait for it to complete
-                        setTimeout(() => {
-                            prefillEntryType();
-                            // Call preselectJournalEntryCapacityTypes after prefillEntryType completes
-                            preselectJournalEntryCapacityTypes();
-                            // Call prefillDateField after prefillEntryType completes
-                            prefillDateField(date.date); // Pass the desired date to prefill
+                        prefillEntryType();
 
-                            // Call prefillStartLessonNr with the startLessonNr from the current entry
-                            const startLessonNr = date.startLessonNr;
-                            const timetableLessons = date.timetableLessons;
-                            fillLessonsAndStartLessonNr(startLessonNr, timetableLessons);
-                        }, 1000); // Adjust the delay as needed
+                        // Call preselectJournalEntryCapacityTypes after prefillEntryType completes
+                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
+                        preselectJournalEntryCapacityTypes();
+
+                        // Call prefillDateField after prefillEntryType completes
+                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
+                        prefillDateField(date.date); // Pass the desired date to prefill
+
+                        // Call prefillStartLessonNr with the startLessonNr from the current entry
+                        const startLessonNr = date.startLessonNr;
+                        const timetableLessons = date.timetableLessons;
+                        fillLessonsAndStartLessonNr(startLessonNr, timetableLessons);
+
+                        // Complete form
+                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
+
+                        // Call clickSaveButton() with a callback
+                        clickSaveButton(async () => {
+                            // This function will be executed after clickSaveButton() finishes
+                            const { schoolId, teacherId } = await getUserData();
+                            console.log("clickSaveButton() completed.");
+
+                            // Clear the cache before adding new data
+                            clearCache();
+
+                            // Update the cache with new data
+                            const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId);
+                            await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate);
+                            console.log("Cache updated with data after clickSaveButton().", cache);
+
+                            // Remove the dynamically created div element from the page
+                            const entryDivToRemove = document.getElementById(`entry_${date.date}`);
+                            if (entryDivToRemove) {
+                                entryDivToRemove.remove();
+                                console.log("Dynamically created div element removed from the page.");
+                            } else {
+                                console.error("Dynamically created div element not found.");
+                            }
+                        });
+
                     }
                 });
 
                 // Append the button to the entry div
                 entryDiv.appendChild(button);
-                
+
                 discrepanciesDiv.appendChild(entryDiv);
             });
 
         }
 
+        // Add missing Timetable entries to the discrepanciesDiv
         if (missingTimetableEntries.length > 0) {
             const timetableTitleDiv = document.createElement('div');
             timetableTitleDiv.textContent = 'Vaste tunniplaanis puudub (Timetable):';
@@ -398,14 +457,72 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
             timetableTitleDiv.style.color = 'red';
             discrepanciesDiv.appendChild(timetableTitleDiv);
 
-            missingTimetableEntries.forEach(date => {
+            for (const dateEntry of missingTimetableEntries) {
                 const entryDiv = document.createElement('div');
-                entryDiv.textContent = date;
+                entryDiv.textContent = dateEntry.date;
+                entryDiv.id = `entry_${dateEntry.date}`; // Assign an ID to the div element based on the date
+
                 entryDiv.style.color = 'red';
+
+                // Find the corresponding entry in the cache data
+                const correspondingEntry = journal.entriesInTimetable.find(entry => entry.date === dateEntry.date);
+                if (correspondingEntry) {
+                    // Assign the id property based on the found entry's id
+                    entryDiv.id = `entry_${correspondingEntry.id}`;
+                    // Add id to the dateEntry object
+                    dateEntry.id = correspondingEntry.id;
+                }
+
+                // Create a button element for each entry
+                const button = document.createElement('button');
+                button.className = 'md-raised md-button md-ink-ripple';
+                button.textContent = 'Kustuta';
+
+                // Add event listener to the dynamically created button
+                button.addEventListener('click', async () => {
+                    try {
+                        // Simulate a click event on the original button
+                        const originalButton = document.querySelector('[ng-click="editJournalEntry(row.id)"]');
+                        if (originalButton instanceof HTMLElement) {
+                            originalButton.click();
+
+                            // After simulating click on the edit button, call deleteJournal
+                            await deleteJournal();
+
+                            const { schoolId, teacherId } = await getUserData();
+
+                            // Clear the cache before adding new data
+                            clearCache();
+
+                            // Update the cache with new data
+                            const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId);
+                            await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate);
+                            console.log("Cache updated with data after clickSaveButton().", cache);
+
+                            // Remove the dynamically created div element from the page
+                            const entryDivToRemove = document.getElementById(`entry_${dateEntry.date}`);
+                            if (entryDivToRemove) {
+                                entryDivToRemove.remove();
+                                console.log("Dynamically created div element removed from the page.");
+                            } else {
+                                console.error("Dynamically created div element not found.");
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error handling button click:', error);
+                    }
+                });
+
+                // Append the button to the entry div
+                entryDiv.appendChild(button);
+
                 discrepanciesDiv.appendChild(entryDiv);
-            });
+            }
+
         }
 
+        // Add mismatching lessons to the discrepanciesDiv
+        // TODO: Add a button to open the modal and prefill the fields
         if (mismatchingLessons.length > 0) {
             const mismatchingLessonsDiv = document.createElement('div');
             mismatchingLessonsDiv.className = 'mismatching-lessons';
@@ -564,6 +681,7 @@ async function updateCacheWithJournalEntries(journalId) {
                 startLessonNr,
                 timetableCount,
                 lessonsInJournal,
+                id: journalEntry ? journalEntry.id : null, // Add the id here
                 mismatch,
                 missing_E,
                 missing_J
@@ -621,30 +739,6 @@ function getCurrentJournalIdFromEditPage(): number | null {
     }
 }
 
-// Function to trigger the opening of the modal and prefill fields
-function triggerModalOpening(data: any): void {
-    // Find the element that triggers the modal opening and trigger its click event
-    const modalTriggerButton = document.querySelector('[ng-click="addNewEntry()"]') as HTMLElement;
-
-    if (modalTriggerButton) {
-        modalTriggerButton.click();
-
-        // Wait for a short delay before attempting to prefill the fields in the opened modal
-        setTimeout(() => prefillModalFields(data), 100); // Pass data to prefillModalFields
-    } else {
-        console.error("Modal trigger button not found.");
-    }
-}
-
-// Function to prefill fields in the opened modal
-function prefillModalFields(data: any): void {
-    // Prefill the entry type field
-    prefillEntryType();
-
-    // Prefill the date field
-    prefillDateField(data);
-}
-
 // Function to prefill the entry type field
 function prefillEntryType(): void {
     console.log("prefillEntryType() called");
@@ -674,26 +768,28 @@ function prefillEntryType(): void {
                 } else {
                     console.error("Option to select not found.");
                 }
-            }, 500); // Adjust the delay as needed
+            }, 100); // Adjust the delay as needed
         } else {
             console.error("Select element not found.");
         }
-    }, 500); // Adjust the delay as needed
+    }, 100); // Adjust the delay as needed
 }
 
 function preselectJournalEntryCapacityTypes(): void {
-    // Find all checkboxes with the specified aria-label
-    const checkboxes = document.querySelectorAll('md-checkbox[aria-label="Auditoorne õpe"]');
+    setTimeout(() => {
+        // Find all checkboxes with the specified aria-label
+        const checkboxes = document.querySelectorAll('md-checkbox[aria-label="Auditoorne õpe"]');
 
-    // Iterate over found checkboxes
-    checkboxes.forEach((checkbox) => {
-        // Simulate a click on the checkbox
-        (checkbox as HTMLElement).click();
-    });
+        // Iterate over found checkboxes
+        checkboxes.forEach((checkbox) => {
+            // Simulate a click on the checkbox
+            (checkbox as HTMLElement).click();
+        });
 
-    if (checkboxes.length === 0) {
-        console.error("Checkbox not found.");
-    }
+        if (checkboxes.length === 0) {
+            console.error("Checkbox not found.");
+        }
+    }, 100); // Adjust the delay as needed
 }
 
 // Function to prefill the date field
@@ -767,6 +863,47 @@ function fillLessonsAndStartLessonNr(startLessonNr: number, lessons: number): vo
     }, 500); // Adjust the delay as needed
 }
 
+function clickSaveButton(callback: () => void): void {
+    setTimeout(() => {
+        const saveButton = document.querySelector('button[ng-click="saveEntry()"]') as HTMLButtonElement;
+        if (saveButton) {
+            console.log("Save button found. Clicking...");
+            saveButton.click();
+            console.log("Save button clicked successfully.");
+            callback(); // Execute the callback function once the save operation is complete
+        } else {
+            console.error("Save button not found.");
+        }
+    }, 2000); // Adjust the delay as needed
+}
+
+async function deleteJournal() {
+    try {
+        // Find the delete button
+        setTimeout(() => {
+            const deleteButton = document.querySelector('[ng-click="delete()"]');
+            if (deleteButton instanceof HTMLElement) {
+                // Simulate click event on the delete button
+                deleteButton.click();
+
+                // setTimeout(() => {
+                const confirmButton = document.querySelector('button[ng-click="accept()"]') as HTMLButtonElement;
+                if (confirmButton instanceof HTMLElement) {
+                    // Simulate click event on the delete button
+                    confirmButton.click();
+                } else {
+                    console.log('Accept button not found or does not exist.');
+                }
+                // }, 200); // Adjust the delay as needed
+            } else {
+                console.log('Delete button not found or does not exist.');
+            }
+        }, 1000); // Adjust the delay as needed
+    } catch (error) {
+        console.error('Error deleting journal:', error);
+    }
+}
+
 function runActionAfterTimeout(action) {
 
     // Cancel the previous timeout if it exists
@@ -807,13 +944,26 @@ async function setUpUrlChangeListener(): Promise<void> {
     function executeActionsBasedOnURL() {
         const currentUrl = window.location.href;
         pageActionsConfig.forEach(config => {
-            if (currentUrl.includes(config.pageIndicator)) {
-                const targets = document.querySelectorAll(config.selector);
-                if (targets.length) {
-                    runActionAfterTimeout(config.action);
-
-                } else {
-                    setUpDOMMutationObserver(config.selector, config.action);
+            // Check if pageIndicator is an array
+            if (Array.isArray(config.pageIndicator)) {
+                // If it's an array, iterate over each page indicator
+                const isPageIndicatorMatched = config.pageIndicator.some(indicator => currentUrl.includes(indicator));
+                if (isPageIndicatorMatched) {
+                    const targets = document.querySelectorAll(config.selector);
+                    if (targets.length) {
+                        runActionAfterTimeout(config.action);
+                    } else {
+                        setUpDOMMutationObserver(config.selector, config.action);
+                    }
+                }
+            } else { // If it's not an array, treat it as a single string
+                if (currentUrl.includes(config.pageIndicator)) {
+                    const targets = document.querySelectorAll(config.selector);
+                    if (targets.length) {
+                        runActionAfterTimeout(config.action);
+                    } else {
+                        setUpDOMMutationObserver(config.selector, config.action);
+                    }
                 }
             }
         });
