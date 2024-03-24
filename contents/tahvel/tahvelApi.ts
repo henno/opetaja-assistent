@@ -373,6 +373,7 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
             journalTitleDiv.textContent = 'Sissekandmata tunnid (Journal):';
             journalTitleDiv.style.fontWeight = 'bold';
             journalTitleDiv.style.color = 'red';
+            journalTitleDiv.id = 'missingJournalEntries';
             discrepanciesDiv.appendChild(journalTitleDiv);
 
             missingJournalEntries.forEach(date => {
@@ -396,47 +397,7 @@ function getJournalDiscrepancies(journal: Journal): HTMLElement | null {
                         originalButton.click();
 
                         // Call the prefillEntryType function and wait for it to complete
-                        prefillEntryType();
-
-                        // Call preselectJournalEntryCapacityTypes after prefillEntryType completes
-                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
-                        preselectJournalEntryCapacityTypes();
-
-                        // Call prefillDateField after prefillEntryType completes
-                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
-                        prefillDateField(date.date); // Pass the desired date to prefill
-
-                        // Call prefillStartLessonNr with the startLessonNr from the current entry
-                        const startLessonNr = date.startLessonNr;
-                        const timetableLessons = date.timetableLessons;
-                        fillLessonsAndStartLessonNr(startLessonNr, timetableLessons);
-
-                        // Complete form
-                        new Promise(resolve => setTimeout(resolve, 100)); // Adjust the timeout as needed
-
-                        // Call clickSaveButton() with a callback
-                        clickSaveButton(async () => {
-                            // This function will be executed after clickSaveButton() finishes
-                            const { schoolId, teacherId } = await getUserData();
-                            console.log("clickSaveButton() completed.");
-
-                            // Clear the cache before adding new data
-                            clearCache();
-
-                            // Update the cache with new data
-                            const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId);
-                            await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate);
-                            console.log("Cache updated with data after clickSaveButton().", cache);
-
-                            // Remove the dynamically created div element from the page
-                            const entryDivToRemove = document.getElementById(`entry_${date.date}`);
-                            if (entryDivToRemove) {
-                                entryDivToRemove.remove();
-                                console.log("Dynamically created div element removed from the page.");
-                            } else {
-                                console.error("Dynamically created div element not found.");
-                            }
-                        });
+                        prefillEntryType(date);
 
                     }
                 });
@@ -740,127 +701,204 @@ function getCurrentJournalIdFromEditPage(): number | null {
 }
 
 // Function to prefill the entry type field
-function prefillEntryType(): void {
+async function prefillEntryType(date): Promise<void> {
     console.log("prefillEntryType() called");
 
-    setTimeout(() => {
-        // Find the md-select element
-        const selectElement = document.querySelector('md-select[aria-label="Sissekande liik"]');
+    // Find the md-select element
+    const selectElement = document.querySelector('md-select[aria-label="Sissekande liik"]');
 
-        if (selectElement) {
-            console.log("Select element found");
+    if (!selectElement) {
+        console.error("Select element not found.");
+        return;
+    }
 
-            // Create and dispatch a click event on the select element to open the dropdown menu
-            const clickEvent = new MouseEvent('click', { bubbles: true });
-            selectElement.dispatchEvent(clickEvent);
+    // Create and dispatch a click event on the select element to open the dropdown menu
+    const clickEvent = new MouseEvent('click', { bubbles: true });
+    selectElement.dispatchEvent(clickEvent);
 
-            // After a short delay, find the option with the value "SISSEKANNE_T" and trigger its selection
-            setTimeout(() => {
-                const optionToSelect = document.querySelector('md-option[value="SISSEKANNE_T"]') as HTMLElement;
+    // Wait for the dropdown options to load
+    await new Promise(resolve => setTimeout(resolve, 100)); // Adjust the delay as needed
 
-                if (optionToSelect) {
-                    console.log("Option to select found");
+    // Find the option with the value "SISSEKANNE_T"
+    const optionToSelect = document.querySelector('md-option[value="SISSEKANNE_T"]') as HTMLElement;
 
-                    // Programmatically trigger a click event on the option to select it
-                    optionToSelect.click();
+    if (!optionToSelect) {
+        console.error("Option to select not found.");
+        return;
+    }
 
-                    console.log("Option selected successfully");
-                } else {
-                    console.error("Option to select not found.");
-                }
-            }, 100); // Adjust the delay as needed
-        } else {
-            console.error("Select element not found.");
-        }
-    }, 100); // Adjust the delay as needed
+    // Programmatically trigger a click event on the option to select it
+    optionToSelect.click();
+
+    console.log("Option selected successfully");
+
+    // Call preselectJournalEntryCapacityTypes after prefillEntryType completes
+    preselectJournalEntryCapacityTypes(date);
 }
 
-function preselectJournalEntryCapacityTypes(): void {
-    setTimeout(() => {
-        // Find all checkboxes with the specified aria-label
-        const checkboxes = document.querySelectorAll('md-checkbox[aria-label="Auditoorne õpe"]');
+// Function to preselect the journal entry capacity types
+function preselectJournalEntryCapacityTypes(date): void {
+    console.log("preselectJournalEntryCapacityTypes() called");
 
-        // Iterate over found checkboxes
-        checkboxes.forEach((checkbox) => {
-            // Simulate a click on the checkbox
-            (checkbox as HTMLElement).click();
+    // Find the checkbox with the specified aria-label
+    const checkbox = document.querySelector('md-checkbox[aria-label="Auditoorne õpe"]');
+
+    if (!checkbox) {
+        console.error("Checkbox not found.");
+        return;
+    }
+
+    // Simulate a click on the checkbox
+    (checkbox as HTMLElement).click();
+
+    console.log("Checkbox selected successfully");
+
+    // Call prefillDateField after prefillEntryType completes
+    // prefillDateField(date); // Pass the desired data to prefill
+    // Example usage of prefillDateField function
+    prefillDateField(date)
+        .then(() => {
+            // Date field prefilling successful
+            console.log("Date field prefilling successful");
+        })
+        .catch(error => {
+            // Handle error from prefillDateField function
+            console.error("Error prefilling date field:", error);
         });
 
-        if (checkboxes.length === 0) {
-            console.error("Checkbox not found.");
+}
+
+async function prefillDateField(date): Promise<void> {
+    console.log("prefillDateField() called");
+
+    return new Promise<void>((resolve, reject) => {
+        // Extract only the date portion from the provided date string
+        const formattedDate = date.date.split('T')[0];
+
+        // Find the md-select element based on aria-label
+        const mdSelect = document.querySelector('md-select[aria-label="Vali kuupäev"]') as HTMLElement;
+
+        if (!mdSelect) {
+            console.error("md-select element not found.");
+            reject("md-select element not found");
+            return;
         }
-    }, 100); // Adjust the delay as needed
+
+        // Simulate opening the dropdown
+        mdSelect.click();
+
+        // Wait for a short time to ensure the options are loaded
+        setTimeout(() => {
+            // Find the option element corresponding to the formatted date
+            const option = document.querySelector(`md-option[aria-label="${formattedDate}"]`) as HTMLElement;
+
+            if (!option) {
+                console.error("Option for the formatted date not found.");
+                reject("Option not found");
+                return;
+            }
+
+            // Trigger a click event on the option to select it
+            option.click();
+
+            // Call prefillStartLessonNr with the startLessonNr from the current entry
+            fillStartLessonNr(date);
+
+            // Resolve the Promise after selecting the date
+            resolve();
+        }, 500); // Adjust the timeout value as needed
+    });
 }
 
-// Function to prefill the date field
-function prefillDateField(date: string): void {
-    // Extract only the date portion from the provided date string
-    const formattedDate = date.split('T')[0];
+function fillStartLessonNr(date): void {
+    console.log("fillStartLessonNr() called");
 
-    // Find the input element for the date field
-    const dateInput = document.querySelector('.md-datepicker-input') as HTMLInputElement;
+    // Find the md-select element for the start lesson number
+    const selectElement = document.querySelector('md-select[aria-label="Algustund"]');
+    const startLessonNr = date.startLessonNr;
+    const timetableLessons = date.timetableLessons;
+    const startLessonNr1 = startLessonNr + 1;
 
-    if (dateInput) {
-        // Simulate user typing the date
-        dateInput.focus();
-        dateInput.value = formattedDate;
-        dateInput.dispatchEvent(new KeyboardEvent('keydown', { key: formattedDate }));
-        dateInput.dispatchEvent(new KeyboardEvent('keypress', { key: formattedDate }));
-        dateInput.dispatchEvent(new Event('input', { bubbles: true }));
-        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-        dateInput.blur();
-    } else {
-        console.error("Date input element not found.");
-    }
-}
+    if (selectElement) {
+        console.log("Start Lesson Number select element found");
 
-function fillLessonsAndStartLessonNr(startLessonNr: number, lessons: number): void {
-    console.log("fillLessonsAndStartLessonNr() called");
+        // Create and dispatch a click event on the select element to open the dropdown menu
+        const clickEvent = new MouseEvent('click', { bubbles: true });
+        selectElement.dispatchEvent(clickEvent);
 
-    setTimeout(() => {
-        // Find the md-select element for the start lesson number
-        const selectElement = document.querySelector('md-select[aria-label="Algustund"]');
+        // After a short delay, find the option with the corresponding value and trigger its selection
+        setTimeout(() => {
+            // const optionToSelect = document.querySelector(`md-option[value="${startLessonNr}"]`) as HTMLElement;
+            const optionToSelect = document.querySelector(`body > div.md-select-menu-container.md-active.md-clickable > md-select-menu > md-content > md-option:nth-child(${startLessonNr1})`) as HTMLElement;
 
-        if (selectElement) {
-            console.log("Start Lesson Number select element found");
+            if (optionToSelect) {
+                console.log("Option to select found");
 
-            // Create and dispatch a click event on the select element to open the dropdown menu
-            const clickEvent = new MouseEvent('click', { bubbles: true });
-            selectElement.dispatchEvent(clickEvent);
+                // Programmatically trigger a click event on the option to select it
+                optionToSelect.click();
 
-            // After a short delay, find the option with the corresponding value and trigger its selection
-            setTimeout(() => {
-                const optionToSelect = document.querySelector(`md-option[value="${startLessonNr}"]`) as HTMLElement;
+                console.log("Option selected successfully");
 
-                if (optionToSelect) {
-                    console.log("Option to select found");
+                // Fill the lessons input field with the provided lessons
+                const lessonsInput = document.querySelector('input[name="lessons"]') as HTMLInputElement;
+                if (lessonsInput) {
+                    lessonsInput.value = timetableLessons.toString();
+                    console.log("Lessons input filled with lessons:", timetableLessons);
 
-                    // Programmatically trigger a click event on the option to select it
-                    optionToSelect.click();
-
-                    console.log("Option selected successfully");
-
-                    // Fill the lessons input field with the provided lessons
-                    const lessonsInput = document.querySelector('input[name="lessons"]') as HTMLInputElement;
-                    if (lessonsInput) {
-                        lessonsInput.value = lessons.toString();
-                        console.log("Lessons input filled with lessons:", lessons);
-
-                        // Dispatch an input event to notify AngularJS of the input value change
-                        const inputEvent = new Event('input', { bubbles: true });
-                        lessonsInput.dispatchEvent(inputEvent);
-                        console.log("Input event dispatched.");
-                    } else {
-                        console.error("Lessons input field not found.");
-                    }
+                    // Dispatch an input event to notify AngularJS of the input value change
+                    const inputEvent = new Event('input', { bubbles: true });
+                    lessonsInput.dispatchEvent(inputEvent);
+                    console.log("Input event dispatched.");
                 } else {
-                    console.error("Option to select not found.");
+                    console.error("%cLessons input field not found.", "color: red;");
                 }
-            }, 500); // Adjust the delay as needed
-        } else {
-            console.error("Start Lesson Number select element not found.");
-        }
-    }, 500); // Adjust the delay as needed
+            } else {
+                console.error("%cOption to select not found.", "color: red;");
+            }
+        }, 500); // Adjust the delay as needed
+    } else {
+        console.error("%cStart Lesson Number select element not found.", "color: red;");
+    }
+
+    // Call clickSaveButton() with a callback
+    setTimeout(() => {
+        clickSaveButton(async () => {
+            // This function will be executed after clickSaveButton() finishes
+            const { schoolId, teacherId } = await getUserData();
+            console.log("clickSaveButton() completed.");
+
+            // Clear the cache before adding new data
+            clearCache();
+
+            // Update the cache with new data
+            const { beginDate, endDate } = await fetchTimetableStudyYears(schoolId);
+            await updateCacheWithTimetableEvents(schoolId, teacherId, beginDate, endDate);
+            console.log("Cache updated with data after clickSaveButton().", cache);
+
+            // Remove the dynamically created div element from the page
+            const entryDivToRemove = document.getElementById(`entry_${date.date}`);
+            if (entryDivToRemove) {
+                const nextEntryDiv = entryDivToRemove.nextElementSibling;
+                entryDivToRemove.remove();
+                console.log("Dynamically created div element removed from the page.");
+
+                // If there are no remaining entry divs after the removed one, remove the div with ID "missingJournalEntries"
+                if (!nextEntryDiv || !nextEntryDiv.matches("[id^='entry_']")) {
+                    const missingEntriesDiv = document.getElementById("missingJournalEntries");
+                    if (missingEntriesDiv) {
+                        missingEntriesDiv.remove();
+                        console.log("Missing journal entries div removed from the page.");
+                    } else {
+                        console.error("Missing journal entries div not found.");
+                    }
+                }
+            } else {
+                console.error("Dynamically created div element not found.");
+            }
+
+        });
+    }, 800); // Adjust the delay as needed
+
 }
 
 function clickSaveButton(callback: () => void): void {
@@ -874,7 +912,7 @@ function clickSaveButton(callback: () => void): void {
         } else {
             console.error("Save button not found.");
         }
-    }, 2000); // Adjust the delay as needed
+    }, 700); // Adjust the delay as needed
 }
 
 async function deleteJournal() {
