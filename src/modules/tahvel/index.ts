@@ -18,6 +18,12 @@ class Tahvel {
             urlFragment: new RegExp('/#/journals(\\?_menu)?'),
             elementToWaitFor: `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`, // <a> tags in journal list
             action: TahvelJournalList.injectAlerts
+        },
+        {
+            description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
+            urlFragment: new RegExp('#/journal/\\d+/edit'),
+            elementToWaitFor: `#journalEntriesByDate`, // The header of the journal page
+            action: TahvelJournal.injectAlerts
         }
     ];
 
