@@ -58,9 +58,7 @@ class Tahvel {
 
             // Do stuff when the user navigates back
             window.addEventListener('popstate', () => {
-                Tahvel.executeActionsBasedOnURL().then(() => {
-                    console.log('Executed actions on back navigation');
-                });
+                Tahvel.executeActionsBasedOnURL();
             });
 
             // Execute actions based on the initial URL

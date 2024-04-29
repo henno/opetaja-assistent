@@ -1,5 +1,6 @@
 class AssistentDom {
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static createElement(type: string, attributes: { [key: string]: any }, textContent?: string): HTMLElement {
         const element = document.createElement(type);
 

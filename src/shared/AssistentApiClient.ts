@@ -19,7 +19,7 @@ class AssistentApiClient {
     }
 
     static async request(method: string, endpoint: string, body: object | null = null) {
-        let options = {
+        const options = {
             method: method,
             headers: {
                 Accept: 'application/json',
@@ -32,6 +32,7 @@ class AssistentApiClient {
         const response = await fetch(AssistentApiClient.url + endpoint, options);
 
         let responseBody: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let responseJson: any;
 
         try {
