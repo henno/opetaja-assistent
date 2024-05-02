@@ -8,6 +8,8 @@ import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import AssistentDom from "~src/shared/AssistentDom";
+import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
+import TahvelGrades from "~src/modules/tahvel/TahvelGrades";
 
 class Tahvel {
 
@@ -119,7 +121,10 @@ class Tahvel {
                         nameEt: entry.name,
                         entriesInJournal: [],
                         entriesInTimetable: [],
-                        differencesToTimetable: []
+                        differencesToTimetable: [],
+                        students: [],
+                        curriculumModules: [],
+                        missingGrades: [],
                     });
                 }
 
@@ -132,9 +137,12 @@ class Tahvel {
 
                 // Add journal entries to the journal object
                 journal.entriesInJournal = await TahvelJournal.fetchEntries(journal.id);
+                journal.students = await TahvelStudents.fetchEntries(journal.id);
+                journal.curriculumModules = await TahvelGrades.fetchCurriculumModules(journal.id);
 
                 // Find discrepancies for this journal
                 AssistentCache.findJournalDiscrepancies(journal.id)
+                AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
             }
         } catch (error) {
             console.error('Error in Tahvel.refreshCache:', error);

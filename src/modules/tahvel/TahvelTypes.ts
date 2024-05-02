@@ -21,3 +21,21 @@ export interface TahvelStudyYear {
     startDate: string;
     endDate: string;
 }
+
+export interface apiStudentEntry {
+    studentId: number;
+    fullname: string;
+    status: string;
+}
+
+export interface apiCurriculumModuleEntry {
+    journalId: number;
+    nameEt: string;
+    curriculumModuleOutcomes: number;
+    entryType: string;
+    studentOutcomeResults: apiGradeEntry[];
+}
+
+export interface apiGradeEntry {
+    studentId: number;
+}
