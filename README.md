@@ -2,7 +2,7 @@
 
 Pivotal Tracker: [https://www.pivotaltracker.com/n/projects/2645015](https://www.pivotaltracker.com/n/projects/2645015)
 
-## Eesmärk!
+## Eesmärk
 
 „Õpetaja assistent“ on Chrome'i laiendus, mis on loodud selleks, et aidata õpetajatel õppeinfosüsteemis rühmade
 päevikuid kontrollida ja nendes esinevaid puudujääke, nagu puuduolevad tunnid või määramata lõpphinded, automaatselt
