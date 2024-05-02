@@ -1,4 +1,11 @@
 class AssistentDom {
+    static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.className = className;
+        button.textContent = textContent;
+        button.addEventListener('click', clickHandler);
+        return button;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static createElement(type: string, attributes: { [key: string]: any }, textContent?: string): HTMLElement {
