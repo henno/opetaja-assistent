@@ -106,17 +106,14 @@ class TahvelJournal {
             for (const discrepancy of sortedDiscrepancies) {
                 const alertElement = TahvelDom.createAlert();
 
-                // Add an action button based on the discrepancy type
-                if (discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0) {
 
-                    // Add the date of the discrepancy
+                // Add the date of the discrepancy
                 alertElement.appendChild(TahvelDom.createAlertDate(DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy')));
 
-                    // Create a message for the discrepancy
+                // Create a message for the discrepancy
                 const journalMessage = TahvelJournal.createMessage(discrepancy, 'journal');
                 alertElement.appendChild(TahvelDom.createMessageElement(`<table><tr><td>Tunniplaanis:</td><td>${(TahvelJournal.createMessage(discrepancy, 'timetable'))}</td></tr><tr><td>Päevikus:</td><td>${journalMessage}</td></tr></table>`));
 
-                }
                 alertsContainer.appendChild(alertElement);
             }
 
