@@ -1,5 +1,6 @@
 class AssistentDom {
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static createElement(type: string, attributes: { [key: string]: any }, textContent?: string): HTMLElement {
         const element = document.createElement(type);
 
@@ -52,7 +53,6 @@ class AssistentDom {
 
         try {
             element = await AssistentDom.waitForElement(s);
-            console.log(`Element ${s} found`);
 
             if (!element) {
                 throw new Error(`Element ${s} not found`);
@@ -64,11 +64,9 @@ class AssistentDom {
 
         let observer: IntersectionObserver;
 
-        console.log(`Waiting for element ${s} to be visible`);
         const observerPromise = new Promise<Element | null>((resolve, reject) => {
             observer = new IntersectionObserver((entries, observer) => {
                 if (entries.length > 0 && entries[0].isIntersecting && getComputedStyle(entries[0].target).display !== 'none') {
-                    console.log(`Element ${s} is intersecting`);
                     observer.disconnect();
                     resolve(element);
                 } else if (timeoutOccurred) {
@@ -99,6 +97,23 @@ class AssistentDom {
         }
     }
 
+    static async waitForAttributeToAppear(element: Element, attribute: string, timeout: number = 3000): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            const observer = new MutationObserver((mutations, observer) => {
+                const attrValue = element.getAttribute(attribute);
+                if (attrValue) {
+                    observer.disconnect();
+                    resolve(attrValue);
+                }
+            });
+            observer.observe(element, {attributes: true});
+
+            setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`${attribute} attribute not found within ${timeout} milliseconds`));
+            }, timeout);
+        });
+    }
 }
 
 export default AssistentDom;

@@ -1,7 +1,6 @@
 import type {
     AssistentJournal,
     AssistentJournalDifference,
-    AssistentJournalEntry,
     AssistentLessonTime
 } from "~src/shared/AssistentTypes";
 import {LessonType} from "~src/shared/AssistentTypes";

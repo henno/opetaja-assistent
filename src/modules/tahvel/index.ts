@@ -18,6 +18,12 @@ class Tahvel {
             urlFragment: new RegExp('/#/journals(\\?_menu)?'),
             elementToWaitFor: `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`, // <a> tags in journal list
             action: TahvelJournalList.injectAlerts
+        },
+        {
+            description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
+            urlFragment: new RegExp('#/journal/\\d+/edit'),
+            elementToWaitFor: `#journalEntriesByDate`, // The header of the journal page
+            action: TahvelJournal.injectAlerts
         }
     ];
 
@@ -58,9 +64,7 @@ class Tahvel {
 
             // Do stuff when the user navigates back
             window.addEventListener('popstate', () => {
-                Tahvel.executeActionsBasedOnURL().then(() => {
-                    console.log('Executed actions on back navigation');
-                });
+                Tahvel.executeActionsBasedOnURL();
             });
 
             // Execute actions based on the initial URL
