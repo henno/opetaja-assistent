@@ -5,12 +5,16 @@ export interface AssistentJournal {
     entriesInJournal: AssistentJournalEntry[];
     differencesToTimetable: AssistentJournalDifference[];
     students: AssistentStudent[];
-    curriculumModules: AssistantCurriculumModules[];
+    learningOutcomes: AssistentLearningOutcomes[];
     missingGrades: StudentsWithoutGrades[];
+    independentWorkPlanned: number;
+    independentWorkGiven: number;
+    contactLessonsPlanned: number;
+    contactLessonsGiven: number;
+    gradingType: string;
 }
 
 export interface AssistentStudent {
-    journalId: number;
     studentId: number;
     fullname: string;
     status: string;
@@ -58,11 +62,8 @@ export enum LessonType {
     Other
 }
 
-export interface AssistantCurriculumModules {
-    journalId: number,
+export interface AssistentLearningOutcomes {
     nameEt: string,
-    curriculumModuleOutcomes: number,
-    entryType: string,
     studentOutcomeResults: StudentOutcomeResults[]
 }
 
@@ -71,14 +72,11 @@ export interface StudentOutcomeResults {
 }
 
 export interface StudentsWithoutGrades {
-    journalId: number,
     nameEt: string,
-    curriculumModuleOutcomes: number,
-    studentList: studentList[]
+    studentList: student[]
 }
 
-export interface studentList {
+export interface student {
     studentId: number,
-    fullname: string,
-    status: string
+    fullname: string
 }

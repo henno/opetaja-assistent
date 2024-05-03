@@ -95,11 +95,9 @@ export class AssistentCache {
         if (!journal) return;
 
         // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
-        for (const curriculumModule of journal.curriculumModules) {
+        for (const curriculumModule of journal.learningOutcomes) {
             const missingGradesForModule: StudentsWithoutGrades = {
-                journalId: journalId,
                 nameEt: curriculumModule.nameEt,
-                curriculumModuleOutcomes: curriculumModule.curriculumModuleOutcomes,
                 studentList: []
             };
 
@@ -119,4 +117,5 @@ export class AssistentCache {
 }
 
 export default AssistentCache;
+ 
 console.log("AssistentCache", AssistentCache.journals);

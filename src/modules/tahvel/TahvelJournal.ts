@@ -1,10 +1,16 @@
 import Api from "~src/shared/AssistentApiClient";
-import {type AssistentJournalDifference, type AssistentJournalEntry, LessonType} from "~src/shared/AssistentTypes";
+import {
+    type AssistentLearningOutcomes,
+    type AssistentJournalDifference,
+    type AssistentJournalEntry,
+    LessonType
+} from "~src/shared/AssistentTypes";
 import {DateTime} from 'luxon';
 import type {apiJournalEntry} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
+import type {apiCurriculumModuleEntry, apiGradeEntry} from "./TahvelTypes";
 
 class TahvelJournal {
     static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
@@ -179,6 +185,54 @@ class TahvelJournal {
         journalHeaderElement.setAttribute('data-alerts-injected', 'true');
     }
 
+    static async injectMissingGradesAlerts() {
+        console.log("Injecting missing grades alerts")
+        const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
+
+        if (!journalHeaderElement) {
+            console.error('Journal header element not found');
+            return;
+        }
+
+        // Check if alerts have already been injected
+        if (journalHeaderElement.getAttribute('data-alerts-injected') === 'true') {
+            return;
+        }
+
+        const journalId = parseInt(window.location.href.split('/')[5]);
+        if (!journalId) {
+            console.error('Journal ID ' + journalId + ' not found in URL');
+            return;
+        }
+        const journal = AssistentCache.getJournal(journalId)
+        if (!journal) {
+            console.error('Journal ' + journalId + ' not found in cache');
+            return;
+        }
+        const missingGrades = journal.missingGrades
+        console.log("Missing grades", missingGrades)
+        // calculate length of entriesInTimetable
+        const entriesInTimetableLength = journal.entriesInTimetable.length
+        // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
+        if (journal.contactLessonsPlanned && journal.contactLessonsPlanned <= entriesInTimetableLength) {
+            const alertsContainer = TahvelDom.createAlertContainer();
+            const headerRow = TahvelDom.createAlertListHeader();
+            headerRow.appendChild(TahvelDom.createGradesHeader());
+            headerRow.appendChild(TahvelDom.createStudentsWithoutGradesListHeader());
+            headerRow.appendChild(TahvelDom.createActionHeader());
+            alertsContainer.appendChild(headerRow);
+            journalHeaderElement.appendChild(alertsContainer);
+            for (const missingGrade of missingGrades) {
+                const alertElement = TahvelDom.createAlert();
+                alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
+                alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
+                alertElement.appendChild(TahvelDom.createActionElement());
+                alertsContainer.appendChild(alertElement);
+            }
+            journalHeaderElement.appendChild(alertsContainer);
+        }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static createMessage(discrepancy: any, type: string): string {
         let message;
@@ -274,6 +328,27 @@ class TahvelJournal {
         // Make the datepicker input border green
         datepickerInput.style.border = '2px solid #40ff6d';
 
+    }
+
+    static async fetchLearningOutcomes(journalId: number): Promise<AssistentLearningOutcomes[]> {
+        const response: apiCurriculumModuleEntry[] = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
+
+        if (!response) {
+            console.error("Error: Journal entries data is missing or in unexpected format");
+            return;
+        }
+
+        return response
+            .filter(entry => entry.entryType === 'SISSEKANNE_O' || entry.entryType === 'SISSEKANNE_L')
+            .map(entry => ({
+                journalId: journalId,
+                nameEt: entry.nameEt,
+                curriculumModuleOutcomes: entry.curriculumModuleOutcomes,
+                entryType: entry.entryType,
+                studentOutcomeResults: Object.values(entry.studentOutcomeResults || {}).map((result: apiGradeEntry) => ({
+                    studentId: result.studentId,
+                }))
+            }));
     }
 }
 

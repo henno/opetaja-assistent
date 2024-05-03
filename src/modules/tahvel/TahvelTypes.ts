@@ -39,3 +39,19 @@ export interface apiCurriculumModuleEntry {
 export interface apiGradeEntry {
     studentId: number;
 }
+
+export interface apiJournalInfoEntry {
+    id: number;
+    lessonHours: apiLessonHours;
+    assessment: string;
+}
+
+export interface apiLessonHours{
+    capacityHours: apiCapacityHours[];
+}
+
+export interface apiCapacityHours {
+    capacity: string;
+    plannedHours: number;
+    usedHours: number;
+}

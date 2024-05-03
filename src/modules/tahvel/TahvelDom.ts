@@ -1,4 +1,5 @@
 import AssistentDom from "~src/shared/AssistentDom";
+import type {student} from "~src/shared/AssistentTypes";
 
 class TahvelDom {
     static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
@@ -192,6 +193,47 @@ class TahvelDom {
         // Make the input border green
         inputElement.style.border = '2px solid #40ff6d';
 
+    }
+
+    static createGradesHeader() {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, 'Õpiväljundid');
+    }
+
+    static createGroupGrades(name_et: string) {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, name_et);
+    }
+
+    static createStudentsWithoutGradesListHeader() {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, 'Hindeta õpilased');
+    }
+
+    static createGradesAlertMessage(studentList: student[]) {
+        const message = studentList.join(', ');
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, message);
     }
 }
 
