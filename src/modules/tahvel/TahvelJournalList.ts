@@ -17,7 +17,7 @@ class TahvelJournalList {
                 const journal = AssistentCache.getJournal(journalId);
 
                 const discrepancies = journal.differencesToTimetable.length > 0;
-                if (discrepancies) {
+                if (discrepancies || (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length)) {
                     const wrapper = document.createElement('span');
                     wrapper.style.display = 'flex';
 

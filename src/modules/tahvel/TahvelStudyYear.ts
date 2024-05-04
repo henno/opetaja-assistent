@@ -19,8 +19,8 @@ class StudyYear {
         this.years = timetableStudyYears;
 
         // Find min and max dates from all study years
-        // StudyYear.minDate = this.years.reduce((min, y) => y.startDate < min ? y.startDate : min, this.years[1].startDate);
-        StudyYear.minDate = "2023-07-31T00:00:00Z"; // For testing
+        StudyYear.minDate = this.years.reduce((min, y) => y.startDate < min ? y.startDate : min, this.years[1].startDate);
+        //StudyYear.minDate = "2023-07-31T00:00:00Z"; // For testing
         StudyYear.maxDate = this.years.reduce((max, y) => y.endDate > max ? y.endDate : max, this.years[0].endDate);
 
     }

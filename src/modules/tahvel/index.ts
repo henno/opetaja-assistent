@@ -1,4 +1,3 @@
-// Tahvel.ts
 import AssistentCache from "~src/shared/AssistentCache";
 import Api from "~src/shared/AssistentApiClient";
 import TahvelLessonTimes from './TahvelLessonTimes.json';
@@ -8,6 +7,13 @@ import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import AssistentDom from "~src/shared/AssistentDom";
+import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
+import {type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
+
+const urlJournalsList = '/#/journals(\\?_menu)?';
+const urlJournalEdit = '#/journal/\\d+/edit';
+const elementJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
+const elementJournalEdit = `#journalEntriesByDate`;
 
 class Tahvel {
 
@@ -15,15 +21,21 @@ class Tahvel {
     static actions = [
         {
             description: 'Inject yellow warning triangles to journal list when there are discrepancies between timetable and journal',
-            urlFragment: new RegExp('/#/journals(\\?_menu)?'),
-            elementToWaitFor: `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`, // <a> tags in journal list
+            urlFragment: new RegExp(urlJournalsList),
+            elementToWaitFor: elementJournalList,
             action: TahvelJournalList.injectAlerts
         },
         {
             description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
-            urlFragment: new RegExp('#/journal/\\d+/edit'),
-            elementToWaitFor: `#journalEntriesByDate`, // The header of the journal page
+            urlFragment: new RegExp(urlJournalEdit),
+            elementToWaitFor: elementJournalEdit,
             action: TahvelJournal.injectAlerts
+        },
+        {
+            description: 'Inject alerts to journal pages when there are missing grades',
+            urlFragment: new RegExp(urlJournalEdit),
+            elementToWaitFor: elementJournalEdit,
+            action: TahvelJournal.injectMissingGradesAlerts
         }
     ];
 
@@ -78,27 +90,24 @@ class Tahvel {
 
     /** Injects the components to the DOM when the user navigates to a new location */
     private static async executeActionsBasedOnURL() {
+    try {
+        // Get the current URL
+        const currentUrl = window.location.href;
 
-        try {
+        // Find all action configs based on the URL
+        const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
 
-            // Get the current URL
-            const currentUrl = window.location.href;
+        for (const actionConfig of actionConfigs) {
+            // Wait for the target element to be visible
+            await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
 
-            // Find the action config based on the URL
-            const actionConfig = Tahvel.actions.find(config => config.urlFragment.test(currentUrl));
-
-            if (actionConfig) {
-
-                // Wait for the target element to be visible
-                await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
-
-                // Execute the action
-                actionConfig.action();
-            }
-        } catch (error) {
-            console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
+            // Execute the action
+            actionConfig.action();
         }
+    } catch (error) {
+        console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
     }
+}
 
     /** Fetches the timetable entries and fills the cache with them */
     private static async refreshCache() {
@@ -119,7 +128,15 @@ class Tahvel {
                         nameEt: entry.name,
                         entriesInJournal: [],
                         entriesInTimetable: [],
-                        differencesToTimetable: []
+                        differencesToTimetable: [],
+                        students: [],
+                        learningOutcomes: [],
+                        missingGrades: [],
+                        contactLessonsPlanned: null,
+                        independentWorkPlanned: null,
+                        contactLessonsGiven: null,
+                        independentWorkGiven: null,
+                        gradingType: null
                     });
                 }
 
@@ -129,12 +146,31 @@ class Tahvel {
 
             // Iterate over the journals and fill entriesInJournal
             for (const journal of AssistentCache.journals) {
-
                 // Add journal entries to the journal object
                 journal.entriesInJournal = await TahvelJournal.fetchEntries(journal.id);
+                journal.students = await TahvelStudents.fetchEntries(journal.id);
+                journal.learningOutcomes = await TahvelJournal.fetchLearningOutcomes(journal.id);
+                try {
+                    const response: apiJournalInfoEntry = await Api.get(`/journals/${journal.id}`);
+
+                    if (!response) {
+                        console.error("Error: Journal entries data is missing or in unexpected format");
+                        return;
+                    }
+
+                    journal.contactLessonsPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.plannedHours || 0;
+                    journal.independentWorkPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.plannedHours || 0;
+                    journal.contactLessonsGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.usedHours || 0;
+                    journal.independentWorkGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.usedHours || 0;
+                    journal.gradingType = response.assessment;
+                } catch (error) {
+                    console.error("Error fetching journal info:", error);
+                    throw error; // Rethrow error for upper layers to handle
+                }
 
                 // Find discrepancies for this journal
                 AssistentCache.findJournalDiscrepancies(journal.id)
+                AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
             }
         } catch (error) {
             console.error('Error in Tahvel.refreshCache:', error);

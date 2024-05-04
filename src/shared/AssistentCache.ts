@@ -1,7 +1,7 @@
 import type {
     AssistentJournal,
     AssistentJournalDifference,
-    AssistentLessonTime
+    AssistentLessonTime, StudentsWithoutGrades
 } from "~src/shared/AssistentTypes";
 import {LessonType} from "~src/shared/AssistentTypes";
 
@@ -87,6 +87,33 @@ export class AssistentCache {
         return AssistentCache.journals.find(j => j.id === journalId);
     }
 
+    // compare studentOutcomeResults and students for each curriculumModuleOutcome and for each journal
+    static findCurriculumModuleOutcomeDiscrepancies(journalId: number): void {
+        const journal = AssistentCache.getJournal(journalId);
+        const missingGrades: StudentsWithoutGrades[] = [];
+
+        if (!journal) return;
+
+        // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
+        for (const curriculumModule of journal.learningOutcomes) {
+            const missingGradesForModule: StudentsWithoutGrades = {
+                nameEt: curriculumModule.nameEt,
+                studentList: []
+            };
+
+            for (const student of journal.students) {
+                // Check if student's status is 'OPPURSTAATUS_O' before calculating missing grades
+                if (student.status === 'OPPURSTAATUS_O' && !curriculumModule.studentOutcomeResults.find(result => result.studentId === student.studentId)) {
+                    missingGradesForModule.studentList.push(student);
+                }
+            }
+
+            if (missingGradesForModule.studentList.length > 0) {
+                missingGrades.push(missingGradesForModule);
+            }
+        }
+        journal.missingGrades = missingGrades;
+    }
 }
 
 export default AssistentCache;

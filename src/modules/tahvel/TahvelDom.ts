@@ -1,4 +1,5 @@
 import AssistentDom from "~src/shared/AssistentDom";
+import type {student} from "~src/shared/AssistentTypes";
 
 class TahvelDom {
     static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
@@ -6,15 +7,17 @@ class TahvelDom {
         return AssistentDom.createButton(className, textContent, clickHandler);
     }
 
-    static createAlertContainer() {
+    static createAlertContainer(alertClassName, marginleft) {
         return AssistentDom.createElement('article', {
-            className: 'alert-container',
+            className: alertClassName,
             style: {
                 display: 'table',
                 border: '1px solid #ccc',
                 backgroundColor: '#f9f9f9',
                 padding: '20px',
-                paddingRight: '30px'
+                paddingRight: '30px',
+                margin: '10px',
+                marginLeft: marginleft,
             }
         });
     }
@@ -192,6 +195,49 @@ class TahvelDom {
         // Make the input border green
         inputElement.style.border = '2px solid #40ff6d';
 
+    }
+
+    static createGradesHeader() {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, 'Õpiväljundid');
+    }
+
+    static createGroupGrades(name_et: string) {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left',
+                maxWidth: '30%'
+            }
+        }, name_et);
+    }
+
+    static createStudentsWithoutGradesListHeader() {
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left'
+            }
+        }, 'Hindeta õpilased');
+    }
+
+    static createGradesAlertMessage(studentList: student[]) {
+        const message = studentList.map(student => student.fullname).join(', ');
+        return AssistentDom.createElement('div', {
+            style: {
+                display: 'table-cell',
+                padding: '2px',
+                textAlign: 'left',
+                maxWidth: '30%'
+            }
+        }, message);
     }
 }
 

@@ -4,6 +4,20 @@ export interface AssistentJournal {
     entriesInTimetable: AssistentTimetableEntry[];
     entriesInJournal: AssistentJournalEntry[];
     differencesToTimetable: AssistentJournalDifference[];
+    students: AssistentStudent[];
+    learningOutcomes: AssistentLearningOutcomes[];
+    missingGrades: StudentsWithoutGrades[];
+    independentWorkPlanned: number;
+    independentWorkGiven: number;
+    contactLessonsPlanned: number;
+    contactLessonsGiven: number;
+    gradingType: string;
+}
+
+export interface AssistentStudent {
+    studentId: number;
+    fullname: string;
+    status: string;
 }
 
 export interface AssistentJournalDifference {
@@ -46,4 +60,23 @@ export enum LessonType {
     IndependentWork,
     Lesson,
     Other
+}
+
+export interface AssistentLearningOutcomes {
+    nameEt: string,
+    studentOutcomeResults: StudentOutcomeResults[]
+}
+
+export interface StudentOutcomeResults {
+    studentId: number,
+}
+
+export interface StudentsWithoutGrades {
+    nameEt: string,
+    studentList: student[]
+}
+
+export interface student {
+    studentId: number,
+    fullname: string
 }
