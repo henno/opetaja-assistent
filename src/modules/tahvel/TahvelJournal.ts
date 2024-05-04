@@ -98,7 +98,7 @@ class TahvelJournal {
             const sortedDiscrepancies = discrepancies.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
             // Create a container for the alerts
-            const alertsContainer = TahvelDom.createAlertContainer();
+            const alertsContainer = TahvelDom.createAlertContainer('alertDiscrepancies', '0px');
 
             const headerRow = TahvelDom.createAlertListHeader();
             headerRow.appendChild(TahvelDom.createDateHeader());
@@ -171,23 +171,19 @@ class TahvelJournal {
                         if (deleteButton) {
                             deleteButton.classList.add('blink');
                         }
-
                     }));
-
                 }
                 alertsContainer.appendChild(alertElement);
             }
-
             journalHeaderElement.appendChild(alertsContainer);
         }
-
         // Mark that alerts have been injected
         journalHeaderElement.setAttribute('data-alerts-injected', 'true');
     }
 
     static async injectMissingGradesAlerts() {
         console.log("Injecting missing grades alerts")
-        const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
+        const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
 
         if (!journalHeaderElement) {
             console.error('Journal header element not found');
@@ -210,26 +206,21 @@ class TahvelJournal {
             return;
         }
         const missingGrades = journal.missingGrades
-        console.log("Missing grades", missingGrades)
-        // calculate length of entriesInTimetable
-        const entriesInTimetableLength = journal.entriesInTimetable.length
         // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
-        if (journal.contactLessonsPlanned && journal.contactLessonsPlanned <= entriesInTimetableLength) {
-            const alertsContainer = TahvelDom.createAlertContainer();
+        if (missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
+            const alertsContainer = TahvelDom.createAlertContainer('alertMissingGrades', '20px');
             const headerRow = TahvelDom.createAlertListHeader();
             headerRow.appendChild(TahvelDom.createGradesHeader());
             headerRow.appendChild(TahvelDom.createStudentsWithoutGradesListHeader());
-            headerRow.appendChild(TahvelDom.createActionHeader());
             alertsContainer.appendChild(headerRow);
             journalHeaderElement.appendChild(alertsContainer);
             for (const missingGrade of missingGrades) {
                 const alertElement = TahvelDom.createAlert();
                 alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
-                alertElement.appendChild(TahvelDom.createActionElement());
                 alertsContainer.appendChild(alertElement);
             }
-            journalHeaderElement.appendChild(alertsContainer);
+            journalHeaderElement.before(alertsContainer);
         }
     }
 
@@ -318,7 +309,7 @@ class TahvelJournal {
         }
 
         // Set the value for the datepicker input
-         // Set your desired date value here
+        // Set your desired date value here
         datepickerInput.value = formattedDate;
 
         // Dispatch an input event to notify AngularJS of the input value change

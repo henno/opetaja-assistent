@@ -7,15 +7,17 @@ class TahvelDom {
         return AssistentDom.createButton(className, textContent, clickHandler);
     }
 
-    static createAlertContainer() {
+    static createAlertContainer(alertClassName, marginleft) {
         return AssistentDom.createElement('article', {
-            className: 'alert-container',
+            className: alertClassName,
             style: {
                 display: 'table',
                 border: '1px solid #ccc',
                 backgroundColor: '#f9f9f9',
                 padding: '20px',
-                paddingRight: '30px'
+                paddingRight: '30px',
+                margin: '10px',
+                marginLeft: marginleft,
             }
         });
     }
@@ -210,7 +212,8 @@ class TahvelDom {
             style: {
                 display: 'table-cell',
                 padding: '2px',
-                textAlign: 'left'
+                textAlign: 'left',
+                maxWidth: '30%'
             }
         }, name_et);
     }
@@ -226,12 +229,13 @@ class TahvelDom {
     }
 
     static createGradesAlertMessage(studentList: student[]) {
-        const message = studentList.join(', ');
+        const message = studentList.map(student => student.fullname).join(', ');
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
                 padding: '2px',
-                textAlign: 'left'
+                textAlign: 'left',
+                maxWidth: '30%'
             }
         }, message);
     }
