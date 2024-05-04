@@ -20,10 +20,14 @@ class Tahvel {
     // Define actions array
     static actions = [
         {
-            description: 'Inject yellow warning triangles to journal list when there are discrepancies between timetable and journal',
+            description: 'Inject warning triangles to journal list when there are discrepancies or missing grades',
             urlFragment: new RegExp(urlJournalsList),
             elementToWaitFor: elementJournalList,
-            action: TahvelJournalList.injectAlerts
+            action: () => {
+                TahvelJournalList.injectMissingLessonsAlerts();
+                TahvelJournalList.injectLessonsDiscrapencesAlerts();
+                TahvelJournalList.injectMissingGradesAlerts();
+            }
         },
         {
             description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
