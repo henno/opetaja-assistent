@@ -114,6 +114,23 @@ export class AssistentCache {
         }
         journal.missingGrades = missingGrades;
     }
+
+    static lessonMissing(id: number) {
+        // if differencesToTimetable length > 0 and differencesToTimetable.journalLessonCount === 0, then set lessonMissing to true
+        const journal = AssistentCache.getJournal(id);
+        if (journal && journal.differencesToTimetable.length > 0 && journal.differencesToTimetable.find(difference => difference.journalLessonCount === 0)) {
+            journal.lessonMissing = true;
+        }
+
+        // if ((differencesToTimetable.timetableFirstLessonStartNumber <> differencesToTimetable.journalFirstLessonStartNumber) or (differencesToTimetable.journalLessonCount <> differencesToTimetable.timetableLessonCount)) or (differencesToTimetable.journalLessonCount > 0 and differencesToTimetable.timetableLessonCount = 0)
+        // then set lessonDiscrepancies to true
+        if (journal && journal.differencesToTimetable.length > 0 && journal.differencesToTimetable.find(difference =>
+            (difference.timetableFirstLessonStartNumber !== difference.journalFirstLessonStartNumber)
+            || (difference.journalLessonCount !== difference.timetableLessonCount)
+            || (difference.journalLessonCount > 0 && difference.timetableLessonCount === 0))) {
+            journal.lessonDiscrepancies = true;
+        }
+    }
 }
 
 export default AssistentCache;

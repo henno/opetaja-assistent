@@ -139,7 +139,6 @@ class TahvelJournal {
 
                 // Add an action button based on the discrepancy type
                 if (discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0) {
-
                     // Add a button to ADD a new journal entry if there are no journal entries for the date, but there are timetable entries
                     alertElement.appendChild(createActionButtonForAlert('md-primary', 'Lisa', '[ng-click="addNewEntry()"]', async () => {
                         await TahvelJournal.setJournalEntryTypeAsLesson()

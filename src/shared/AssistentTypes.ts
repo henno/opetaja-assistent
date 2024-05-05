@@ -12,6 +12,8 @@ export interface AssistentJournal {
     contactLessonsPlanned: number;
     contactLessonsGiven: number;
     gradingType: string;
+    lessonMissing: boolean;
+    lessonDiscrepancies: boolean;
 }
 
 export interface AssistentStudent {

@@ -136,7 +136,9 @@ class Tahvel {
                         independentWorkPlanned: null,
                         contactLessonsGiven: null,
                         independentWorkGiven: null,
-                        gradingType: null
+                        gradingType: null,
+                        lessonMissing: false,
+                        lessonDiscrepancies: false
                     });
                 }
 
@@ -171,6 +173,8 @@ class Tahvel {
                 // Find discrepancies for this journal
                 AssistentCache.findJournalDiscrepancies(journal.id)
                 AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
+                AssistentCache.lessonMissing(journal.id)
+
             }
         } catch (error) {
             console.error('Error in Tahvel.refreshCache:', error);
