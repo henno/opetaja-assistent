@@ -2,6 +2,19 @@ import AssistentDom from "~src/shared/AssistentDom";
 import type {student} from "~src/shared/AssistentTypes";
 
 class TahvelDom {
+    static createExclamationMark(id: string, color: string, innerHTML: string, title: string): HTMLSpanElement {
+        const exclamationMark = document.createElement('span');
+        exclamationMark.id = id;
+        exclamationMark.style.color = color;
+        exclamationMark.style.fontWeight = 'bold';
+        exclamationMark.innerHTML = innerHTML;
+        exclamationMark.style.paddingLeft = '5px';
+        exclamationMark.title = title;
+        exclamationMark.style.fontSize = '1.3em';
+
+        return exclamationMark;
+    }
+
     static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
         className = 'md-raised md-button md-ink-ripple ' + className;
         return AssistentDom.createButton(className, textContent, clickHandler);

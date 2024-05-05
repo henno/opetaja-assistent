@@ -1,4 +1,5 @@
 import {AssistentCache} from '~src/shared/AssistentCache';
+import TahvelDom from "~src/modules/tahvel/TahvelDom";
 
 class TahvelJournalList {
     static injectAlerts() {
@@ -16,31 +17,38 @@ class TahvelJournalList {
 
                 const journal = AssistentCache.getJournal(journalId);
 
-                const discrepancies = journal.differencesToTimetable.length > 0;
-                if (discrepancies || (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length)) {
-                    const wrapper = document.createElement('span');
-                    wrapper.style.display = 'flex';
+                const wrapper = document.createElement('span');
+                wrapper.style.display = 'flex';
+                wrapper.id = 'InjectionsWrapper';
 
-                    const exclamationMark = document.createElement('span');
-                    exclamationMark.style.color = 'red';
-                    // exclamationMark.innerHTML = `ℹ️`;
-                    exclamationMark.innerHTML = `⚠️`;
-                    exclamationMark.style.paddingLeft = '5px';
-                    // exclamationMark.style.fontSize = '1.3em';
+                wrapper.appendChild(link.cloneNode(true));
 
-                    wrapper.appendChild(link.cloneNode(true));
+                // If there are lessons in timetable that are not in journal
+                if (journal.lessonMissing) {
+                    // console.log('Missing lessons in journal:', journal);
+                    const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', '#f8d00f', '\u26A0', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
                     wrapper.appendChild(exclamationMark);
-
-                    link.replaceWith(wrapper);
                 }
 
+                // If there are lessons in journal that are not in timetable
+                if (journal.lessonDiscrepancies) {
+                    const exclamationMark = TahvelDom.createExclamationMark('DiscrepanciesAlert', 'grey', '\u26A0', 'Erinevused päeviku sissekannete ja tunniplaani vahel');
+                    wrapper.appendChild(exclamationMark);
+                }
+
+                // If there are missing grades in journal
+                if (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
+                    const exclamationMark = TahvelDom.createExclamationMark('MissingGradesAlert', 'red', '\u26A0', 'Päevikus puuduvad hinded');
+                    wrapper.appendChild(exclamationMark);
+                }
+
+                link.replaceWith(wrapper);
             });
 
         } catch (error) {
             console.error('Error in TahvelJournalList.injectAlerts:', error);
         }
     }
-
 }
 
 export default TahvelJournalList;

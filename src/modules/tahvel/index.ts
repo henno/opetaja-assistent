@@ -20,7 +20,7 @@ class Tahvel {
     // Define actions array
     static actions = [
         {
-            description: 'Inject yellow warning triangles to journal list when there are discrepancies between timetable and journal',
+            description: 'Inject warning triangles to journal list when there are discrepancies or missing grades',
             urlFragment: new RegExp(urlJournalsList),
             elementToWaitFor: elementJournalList,
             action: TahvelJournalList.injectAlerts
@@ -136,7 +136,9 @@ class Tahvel {
                         independentWorkPlanned: null,
                         contactLessonsGiven: null,
                         independentWorkGiven: null,
-                        gradingType: null
+                        gradingType: null,
+                        lessonMissing: false,
+                        lessonDiscrepancies: false
                     });
                 }
 
@@ -171,6 +173,8 @@ class Tahvel {
                 // Find discrepancies for this journal
                 AssistentCache.findJournalDiscrepancies(journal.id)
                 AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
+                AssistentCache.findJournalLessonsDifferencesFact(journal.id)
+
             }
         } catch (error) {
             console.error('Error in Tahvel.refreshCache:', error);
