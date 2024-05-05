@@ -26,7 +26,7 @@ class TahvelJournalList {
                 // If there are lessons in timetable that are not in journal
                 if (journal.lessonMissing) {
                     // console.log('Missing lessons in journal:', journal);
-                    const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', '#FFD700', '\u26A0', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
+                    const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', '#f8d00f', '\u26A0', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
                     wrapper.appendChild(exclamationMark);
                 }
 
