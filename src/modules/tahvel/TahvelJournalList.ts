@@ -1,7 +1,8 @@
 import {AssistentCache} from '~src/shared/AssistentCache';
+import TahvelDom from "~src/modules/tahvel/TahvelDom";
 
 class TahvelJournalList {
-    static injectMissingLessonsAlerts() {
+    static injectAlerts() {
 
         try {
             const journalsListTableRowsSelector = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
@@ -19,117 +20,41 @@ class TahvelJournalList {
                 const discrepancies = journal.differencesToTimetable;
 
                 discrepancies.forEach((difference) => {
-                    if (difference.timetableLessonCount > 0 && difference.journalLessonCount === 0) {
-                        const wrapper = document.createElement('span');
-                        wrapper.style.display = 'flex';
-
-                        const exclamationMark = document.createElement('span');
-                        //exclamationMark.style.color = 'yellow';
-                        // exclamationMark.innerHTML = `ℹ️`;
-                        exclamationMark.style.fontWeight = 'bold';
-                        exclamationMark.innerHTML = `⚠️`;
-                        exclamationMark.style.paddingLeft = '5px';
-                        //exclamationMark.style.fontSize = '1.3em';
-                        exclamationMark.title = 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga'; // Tooltip text
-
-                        wrapper.appendChild(link.cloneNode(true));
-                        wrapper.appendChild(exclamationMark);
-
-                        link.replaceWith(wrapper);
-                    }
-                });
-            });
-
-        } catch (error) {
-            console.error('Error in TahvelJournalList.injectAlerts:', error);
-        }
-    }
-
-    static injectLessonsDiscrapencesAlerts() {
-
-        try {
-            const journalsListTableRowsSelector = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
-            const journalLinksSelector = `${journalsListTableRowsSelector} > td:nth-child(2) > a`
-
-            const journalLinks = document.querySelectorAll(journalLinksSelector);
-
-            journalLinks.forEach(async (link) => {
-                const href = link.getAttribute('href');
-
-                const journalId = parseInt(href.split('/')[3]);
-
-                const journal = AssistentCache.getJournal(journalId);
-
-                const discrepancies = journal.differencesToTimetable;
-
-                discrepancies.forEach((difference) => {
-                    if ((difference.timetableLessonCount > 0
-                        && difference.journalLessonCount > 0
-                        && (difference.timetableLessonCount !== difference.journalLessonCount || difference.timetableFirstLessonStartNumber !== difference.journalFirstLessonStartNumber))
-                    || (difference.journalLessonCount > 0 && difference.timetableLessonCount === 0)){
-                        const wrapper = document.createElement('span');
-                        wrapper.style.display = 'flex';
-
-                        const exclamationMark = document.createElement('span');
-                        exclamationMark.style.color = 'grey';
-                        // exclamationMark.innerHTML = `ℹ️`;
-                        exclamationMark.style.fontWeight = 'bold';
-                        exclamationMark.innerHTML = `\u26A0`; // Unicode for ⚠️
-                        exclamationMark.style.paddingLeft = '5px';
-                        //exclamationMark.style.fontSize = '1.3em';
-                        exclamationMark.title = 'Erinevused päeviku sissekannete ja tunniplaani vahel';
-
-                        wrapper.appendChild(link.cloneNode(true));
-                        wrapper.appendChild(exclamationMark);
-
-                        link.replaceWith(wrapper);
-                    }
-                });
-            });
-
-        } catch (error) {
-            console.error('Error in TahvelJournalList.injectAlerts:', error);
-        }
-    }
-
-    static injectMissingGradesAlerts() {
-        try {
-            const journalsListTableRowsSelector = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
-            const journalLinksSelector = `${journalsListTableRowsSelector} > td:nth-child(2) > a`
-
-            const journalLinks = document.querySelectorAll(journalLinksSelector);
-
-            journalLinks.forEach(async (link) => {
-                const href = link.getAttribute('href');
-
-                const journalId = parseInt(href.split('/')[3]);
-
-                const journal = AssistentCache.getJournal(journalId);
-
-                if (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
                     const wrapper = document.createElement('span');
-                    wrapper.style.display = 'flex';
-
-                    const exclamationMark = document.createElement('span');
-                    exclamationMark.style.color = 'red';
-                    // exclamationMark.innerHTML = `ℹ️`;
-                    exclamationMark.style.fontWeight = 'bold';
-                    exclamationMark.innerHTML = `\u26A0`; // Unicode for ⚠️
-                    exclamationMark.style.paddingLeft = '5px';
-                    exclamationMark.style.fontSize = '1.3em';
-                    exclamationMark.title = 'Päevikus puuduvad hinded';
+                    // wrapper.style.display = 'flex';
+                    wrapper.id = 'InjectionsWrapper';
 
                     wrapper.appendChild(link.cloneNode(true));
-                    wrapper.appendChild(exclamationMark);
+
+                    // If there are lessons in timetable that are not in journal
+                    if (difference.timetableLessonCount > 0 && difference.journalLessonCount === 0) {
+    const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', 'yellow', '\u26A0', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
+    wrapper.appendChild(exclamationMark);
+}
+
+// If there are lessons in journal that are not in timetable
+if ((difference.timetableLessonCount > 0
+        && difference.journalLessonCount > 0
+        && (difference.timetableLessonCount !== difference.journalLessonCount || difference.timetableFirstLessonStartNumber !== difference.journalFirstLessonStartNumber))
+    || (difference.journalLessonCount > 0 && difference.timetableLessonCount === 0)) {
+    const exclamationMark = TahvelDom.createExclamationMark('DiscrepanciesAlert', 'grey', '\u26A0', 'Erinevused päeviku sissekannete ja tunniplaani vahel');
+    wrapper.appendChild(exclamationMark);
+}
+
+// If there are missing grades in journal
+if (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
+    const exclamationMark = TahvelDom.createExclamationMark('MissingGradesAlert', 'red', '\u26A0', 'Päevikus puuduvad hinded');
+    wrapper.appendChild(exclamationMark);
+}
 
                     link.replaceWith(wrapper);
-                }
+                });
             });
+
         } catch (error) {
-            console.error('Error in TahvelJournalList.injectMissingGradesAlerts:', error);
+            console.error('Error in TahvelJournalList.injectAlerts:', error);
         }
     }
-
 }
 
 export default TahvelJournalList;
