@@ -31,6 +31,31 @@ class TahvelJournal {
         }));
     }
 
+private static async findJournalGradeElement(nameEt: string) {
+    // return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
+    // Wait for the first <th> element to be visible
+    await AssistentDom.waitForElementToBeVisible('table.journalTable th');
+
+    // Select all <th> elements within the journal table
+    const thElements = document.querySelectorAll('table.journalTable th');
+
+    // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
+    const filteredElements = Array.from(thElements).filter(th => {
+        const divElement = th.querySelector('div');
+        if (!divElement) return false;
+        const ariaLabel = divElement.getAttribute('aria-label');
+        return th.innerHTML.includes(`${nameEt}`);
+    });
+    if (filteredElements.length === 0) {
+        return null;
+    }
+    const spanElement = filteredElements[0].querySelector('span[ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"]') as HTMLElement;
+    if (!spanElement) {
+        return null;
+    }
+    return spanElement;
+}
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async findJournalEntryElement(discrepancy: any): Promise<HTMLElement | null> {
         const discrepancyDate = new Date(discrepancy.date);
@@ -68,6 +93,21 @@ class TahvelJournal {
         return spanElement;
     }
 
+    // If there are no journal entries for the date, but there are timetable entries, add a button to add a new journal entry
+    static createActionButtonForAlert(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
+        const actionElement = TahvelDom.createActionElement();
+        actionElement.appendChild(TahvelDom.createButton(color, text, async () => {
+            const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
+            if (element) {
+
+                element.click();
+                if (clickCallback) {
+                    clickCallback();
+                }
+            }
+        }));
+        return actionElement;
+    }
     static async injectAlerts() {
         const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
 
@@ -109,22 +149,6 @@ class TahvelJournal {
             journalHeaderElement.appendChild(alertsContainer);
 
 
-            // If there are no journal entries for the date, but there are timetable entries, add a button to add a new journal entry
-            function createActionButtonForAlert(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
-                const actionElement = TahvelDom.createActionElement();
-                actionElement.appendChild(TahvelDom.createButton(color, text, async () => {
-                    const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
-                    if (element) {
-
-                        element.click();
-                        if (clickCallback) {
-                            clickCallback();
-                        }
-                    }
-                }));
-                return actionElement;
-            }
-
             // Iterate over the discrepancies and create an alert with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
                 const alertElement = TahvelDom.createAlert();
@@ -140,7 +164,7 @@ class TahvelJournal {
                 // Add an action button based on the discrepancy type
                 if (discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0) {
                     // Add a button to ADD a new journal entry if there are no journal entries for the date, but there are timetable entries
-                    alertElement.appendChild(createActionButtonForAlert('md-primary', 'Lisa', '[ng-click="addNewEntry()"]', async () => {
+                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-primary', 'Lisa', '[ng-click="addNewEntry()"]', async () => {
                         await TahvelJournal.setJournalEntryTypeAsLesson()
                         await TahvelJournal.setJournalEntryTypeAsContactLesson() // can be async
                         await TahvelJournal.setJournalEntryDate(discrepancy) // can be async
@@ -152,15 +176,15 @@ class TahvelJournal {
                     && (discrepancy.timetableLessonCount !== discrepancy.journalLessonCount || discrepancy.timetableFirstLessonStartNumber !== discrepancy.journalFirstLessonStartNumber)
                 ) {
 
+
                     // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
-                    alertElement.appendChild(createActionButtonForAlert('md-accent', 'Muuda', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
+                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Muuda', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
                         await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy);
                     }));
-
                 } else if (discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0) {
 
                     // Add a button to delete the journal entry if there are no timetable entries for the date, but there are journal entries
-                    alertElement.appendChild(createActionButtonForAlert('md-warn', 'Vaata', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
+                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-warn', 'Vaata', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
                         // Create a style element
                         const style = TahvelDom.createBlinkStyle();
                         // Append the style element to the document head
@@ -210,12 +234,21 @@ class TahvelJournal {
             const headerRow = TahvelDom.createAlertListHeader();
             headerRow.appendChild(TahvelDom.createGradesHeader());
             headerRow.appendChild(TahvelDom.createStudentsWithoutGradesListHeader());
+            headerRow.appendChild(TahvelDom.createActionHeader());
             alertsContainer.appendChild(headerRow);
             journalHeaderElement.appendChild(alertsContainer);
+
             for (const missingGrade of missingGrades) {
                 const alertElement = TahvelDom.createAlert();
                 alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
+                // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
+                alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Lisa',
+                //     // find journal entry element which aria-label equals missingGrade.nameEt
+                    await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
+                        // await TahvelJournal.setJournalEntryTypeAsLesson()
+                        await TahvelJournal.setGrade();
+                    }));
                 alertsContainer.appendChild(alertElement);
             }
             journalHeaderElement.before(alertsContainer);
@@ -337,6 +370,31 @@ class TahvelJournal {
                     studentId: result.studentId,
                 }))
             }));
+    }
+
+
+    private static async setGrade() {
+        // if gradingType in cache is "KUTSEHINDAMISVIIS_E" then set grade as "2" but when it's "KUTSEHINDAMISVIIS_M" then set grade as "MA"
+        const journalId = parseInt(window.location.href.split('/')[5]);
+        const journal = AssistentCache.getJournal(journalId);
+        const gradingType = journal.gradingType;
+        const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
+        // const gradeElement = await AssistentDom.waitForElement('input[ng-model="journalEntry.grade"]') as HTMLInputElement;
+        console.log("grade", grade);
+        // wait for table class="md-table" to be visible
+        await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
+        console.log("table.md-table is visible");
+        // return all md-select elements which has aria-label="grade" and which md-select's value has "2"
+        // const selectElements = document.querySelectorAll('md-select[aria-label="grade"]');
+        const selectElements = document.querySelectorAll<HTMLSelectElement>('md-select[aria-label="grade"]');
+        console.log("selectElements", selectElements);
+        // filter selectElements and return those which innerText is empty
+        selectElements.forEach(selectElement => {
+            if (!selectElement.value) {
+                console.log(selectElement); // This is the element where no value is selected
+            }
+        });
+
     }
 }
 
