@@ -10,6 +10,7 @@ class TahvelDom {
         exclamationMark.innerHTML = innerHTML;
         exclamationMark.style.paddingLeft = '5px';
         exclamationMark.title = title;
+        exclamationMark.style.fontSize = '1.3em';
 
         return exclamationMark;
     }

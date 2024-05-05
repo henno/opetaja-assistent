@@ -173,7 +173,7 @@ class Tahvel {
                 // Find discrepancies for this journal
                 AssistentCache.findJournalDiscrepancies(journal.id)
                 AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
-                AssistentCache.lessonMissing(journal.id)
+                AssistentCache.findJournalLessonsDifferencesFact(journal.id)
 
             }
         } catch (error) {

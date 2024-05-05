@@ -17,42 +17,32 @@ class TahvelJournalList {
 
                 const journal = AssistentCache.getJournal(journalId);
 
-                const discrepancies = journal.differencesToTimetable;
-                // console.log('Discrepancies:', discrepancies);
+                const wrapper = document.createElement('span');
+                // wrapper.style.display = 'flex';
+                wrapper.id = 'InjectionsWrapper';
 
-                discrepancies.forEach((difference) => {
-                    // console.log('Journal:', journal)
-                    console.log('Difference:', difference);
-                    const wrapper = document.createElement('span');
-                    // wrapper.style.display = 'flex';
-                    wrapper.id = 'InjectionsWrapper';
+                wrapper.appendChild(link.cloneNode(true));
 
-                    wrapper.appendChild(link.cloneNode(true));
+                // If there are lessons in timetable that are not in journal
+                if (journal.lessonMissing) {
+                    // console.log('Missing lessons in journal:', journal);
+                    const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', '#FFD700', '\u26A0', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
+                    wrapper.appendChild(exclamationMark);
+                }
 
-                    // If there are lessons in timetable that are not in journal
-                    if (difference.timetableLessonCount > 0 && difference.journalLessonCount === 0) {
-                        // console.log('Missing lessons in journal:', journal);
-                        const exclamationMark = TahvelDom.createExclamationMark('MissingLessonsAlert', 'yellow', '⚠️', 'Päevikus puuduvad sissekanded võrreldes tunniplaaniga');
-                        wrapper.appendChild(exclamationMark);
-                    }
+                // If there are lessons in journal that are not in timetable
+                if (journal.lessonDiscrepancies) {
+                    const exclamationMark = TahvelDom.createExclamationMark('DiscrepanciesAlert', 'grey', '\u26A0', 'Erinevused päeviku sissekannete ja tunniplaani vahel');
+                    wrapper.appendChild(exclamationMark);
+                }
 
-                    // If there are lessons in journal that are not in timetable
-                    if ((difference.timetableLessonCount > 0
-                            && difference.journalLessonCount > 0
-                            && (difference.timetableLessonCount !== difference.journalLessonCount || difference.timetableFirstLessonStartNumber !== difference.journalFirstLessonStartNumber))
-                        || (difference.journalLessonCount > 0 && difference.timetableLessonCount === 0)) {
-                        const exclamationMark = TahvelDom.createExclamationMark('DiscrepanciesAlert', 'grey', '\u26A0', 'Erinevused päeviku sissekannete ja tunniplaani vahel');
-                        wrapper.appendChild(exclamationMark);
-                    }
+                // If there are missing grades in journal
+                if (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
+                    const exclamationMark = TahvelDom.createExclamationMark('MissingGradesAlert', 'red', '\u26A0', 'Päevikus puuduvad hinded');
+                    wrapper.appendChild(exclamationMark);
+                }
 
-                    // If there are missing grades in journal
-                    if (journal.missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
-                        const exclamationMark = TahvelDom.createExclamationMark('MissingGradesAlert', 'red', '\u26A0', 'Päevikus puuduvad hinded');
-                        wrapper.appendChild(exclamationMark);
-                    }
-
-                    link.replaceWith(wrapper);
-                });
+                link.replaceWith(wrapper);
             });
 
         } catch (error) {
