@@ -43,7 +43,7 @@ private static async findJournalGradeElement(nameEt: string) {
     const filteredElements = Array.from(thElements).filter(th => {
         const divElement = th.querySelector('div');
         if (!divElement) return false;
-        const ariaLabel = divElement.getAttribute('aria-label');
+        // const ariaLabel = divElement.getAttribute('aria-label');
         return th.innerHTML.includes(`${nameEt}`);
     });
     if (filteredElements.length === 0) {
@@ -372,30 +372,91 @@ private static async findJournalGradeElement(nameEt: string) {
             }));
     }
 
-
     private static async setGrade() {
-        // if gradingType in cache is "KUTSEHINDAMISVIIS_E" then set grade as "2" but when it's "KUTSEHINDAMISVIIS_M" then set grade as "MA"
-        const journalId = parseInt(window.location.href.split('/')[5]);
-        const journal = AssistentCache.getJournal(journalId);
-        const gradingType = journal.gradingType;
-        const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
-        // const gradeElement = await AssistentDom.waitForElement('input[ng-model="journalEntry.grade"]') as HTMLInputElement;
-        console.log("grade", grade);
-        // wait for table class="md-table" to be visible
-        await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
-        console.log("table.md-table is visible");
-        // return all md-select elements which has aria-label="grade" and which md-select's value has "2"
-        // const selectElements = document.querySelectorAll('md-select[aria-label="grade"]');
-        const selectElements = document.querySelectorAll<HTMLSelectElement>('md-select[aria-label="grade"]');
-        console.log("selectElements", selectElements);
-        // filter selectElements and return those which innerText is empty
-        selectElements.forEach(selectElement => {
-            if (!selectElement.value) {
-                console.log(selectElement); // This is the element where no value is selected
-            }
-        });
+    const journalId = parseInt(window.location.href.split('/')[5]);
+    const journal = AssistentCache.getJournal(journalId);
+    const gradingType = journal.gradingType;
+    const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
 
+    await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
+
+    const selectValueElements = document.querySelectorAll('md-select-value');
+
+    const emptySelectValueElements = Array.from(selectValueElements).filter(element => {
+        return element.textContent.trim() === '';
+    });
+
+    for (const element of emptySelectValueElements) {
+        try {
+            const htmlElement = element as HTMLElement;
+            htmlElement.click();
+
+            // Wait for the md-option elements to be present in the DOM
+            await AssistentDom.waitForElement('md-option');
+
+            // Log all the options for this specific dropdown
+            const options = Array.from(htmlElement.parentElement.querySelectorAll('md-option'));
+            console.log('Options:', options.map(option => option.textContent.trim()));
+
+            const dropdownOption = await new Promise((resolve, reject) => {
+                const interval = setInterval(() => {
+                    const option = options.find(option => {
+                        return option.textContent.trim() === grade;
+                    });
+                    if (option) {
+                        clearInterval(interval);
+                        resolve(option);
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(interval);
+                    reject(new Error('Option not found'));
+                }, 5000);
+            });
+
+            if (dropdownOption) {
+                (dropdownOption as HTMLElement).click();
+            }
+
+            const event = new Event('change', { bubbles: true });
+            htmlElement.dispatchEvent(event);
+
+            htmlElement.style.border = '2px solid #40ff6d';
+
+            // Set the date after selecting the dropdown value
+            // Find the parent row of the current dropdown
+            const parentRow = htmlElement.closest('tr');
+            if (!parentRow) {
+                console.error("Parent row not found.");
+                return;
+            }
+
+            // Find the date input within the parent row
+            const dateInput = parentRow.querySelector('input[aria-label="grade date"]') as HTMLInputElement;
+
+            if (!dateInput) {
+                console.error("Date input field not found.");
+                return;
+            }
+
+            // Log the selected date input field
+            console.log('Selected date input field:', dateInput);
+
+            // Set the value for the date input
+            dateInput.value = '09.05.2024';
+
+            // Dispatch an input event to notify AngularJS of the input value change
+            const inputEvent = new Event('input', {bubbles: true});
+            dateInput.dispatchEvent(inputEvent);
+
+            // Make the date input border green
+            dateInput.style.border = '2px solid #40ff6d';
+
+        } catch (error) {
+            console.error('An error occurred:', error);
+        }
     }
+}
 }
 
 export default TahvelJournal;
