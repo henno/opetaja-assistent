@@ -443,7 +443,16 @@ private static async findJournalGradeElement(nameEt: string) {
             console.log('Selected date input field:', dateInput);
 
             // Set the value for the date input
-            dateInput.value = '09.05.2024';
+            // Get today's date
+            const today = new Date();
+
+            // Format the date to the desired format (dd.mm.yyyy)
+            const formattedDate = today.getDate().toString().padStart(2, '0') + '.' +
+                (today.getMonth() + 1).toString().padStart(2, '0') + '.' +
+                today.getFullYear();
+
+            // Set the value for the date input
+            dateInput.value = formattedDate;
 
             // Dispatch an input event to notify AngularJS of the input value change
             const inputEvent = new Event('input', {bubbles: true});
