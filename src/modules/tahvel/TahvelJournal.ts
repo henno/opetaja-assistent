@@ -244,13 +244,74 @@ private static async findJournalGradeElement(nameEt: string) {
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
                 // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
                 alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Lisa',
-                //     // find journal entry element which aria-label equals missingGrade.nameEt
-                    await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
-                        // await TahvelJournal.setJournalEntryTypeAsLesson()
-                        await TahvelJournal.setGrade();
-                    }));
+                // find journal entry element which aria-label equals missingGrade.nameEt
+                await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
+                    // Get the selected radio button's id
+                    const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
+                    console.log('Selected radio button id:', selectedRadioButtonId);
+                    // Pass the id to the form or use it as needed
+                    // For example, you can set it as a data attribute on the form
+                    const formElement = document.querySelector('form[name="dialogForm"]');
+                    if (formElement) {
+                        formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
+                    }
+                    // await TahvelJournal.setJournalEntryTypeAsLesson()
+                    await TahvelJournal.setGrade(selectedRadioButtonId);
+                }));
                 alertsContainer.appendChild(alertElement);
             }
+
+            /* Urmase liivakast */
+           const alertElement1 = TahvelDom.createAlert();
+            alertElement1.style.marginTop = "40px"; // Change "20px" to the amount of space you want
+
+            // Create the first radio button
+            // Get the gradingType from the journal
+            const gradingType = journal.gradingType;
+
+            // Create the first radio button
+            const radioButton1 = document.createElement('input');
+            radioButton1.type = 'radio';
+            radioButton1.name = 'grading';
+            radioButton1.value = 'Mitteeristav hindamine';
+            radioButton1.id = 'mitteeristav';
+            radioButton1.checked = gradingType !== "KUTSEHINDAMISVIIS_E"; // Set as default if gradingType is not "KUTSEHINDAMISVIIS_E"
+
+            // Create a label for the first radio button
+            const label1 = document.createElement('label');
+            label1.htmlFor = 'mitteeristav';
+            label1.textContent = 'Mitteeristav hindamine';
+
+            // Wrap radio button and label in a div
+            const div1 = document.createElement('div');
+            div1.appendChild(radioButton1);
+            div1.appendChild(label1);
+
+            // Create the second radio button
+            const radioButton2 = document.createElement('input');
+            radioButton2.type = 'radio';
+            radioButton2.name = 'grading';
+            radioButton2.value = 'Eristav hindamine';
+            radioButton2.id = 'eristav';
+            radioButton2.checked = gradingType === "KUTSEHINDAMISVIIS_E"; // Set as default if gradingType is "KUTSEHINDAMISVIIS_E"
+
+            // Create a label for the second radio button
+            const label2 = document.createElement('label');
+            label2.htmlFor = 'eristav';
+            label2.textContent = 'Eristav hindamine';
+
+            // Wrap radio button and label in a div
+            const div2 = document.createElement('div');
+            div2.appendChild(radioButton2);
+            div2.appendChild(label2);
+
+            // Append the divs to the alert element
+            alertElement1.appendChild(div1);
+            alertElement1.appendChild(div2);
+
+            alertsContainer.appendChild(alertElement1);
+            /* Urmase liivakast END */
+
             journalHeaderElement.before(alertsContainer);
         }
     }
@@ -372,19 +433,25 @@ private static async findJournalGradeElement(nameEt: string) {
             }));
     }
 
-    private static async setGrade() {
-    const journalId = parseInt(window.location.href.split('/')[5]);
-    const journal = AssistentCache.getJournal(journalId);
-    const gradingType = journal.gradingType;
-    const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
+    private static async setGrade(selectedRadioButtonId) {
+    // const journalId = parseInt(window.location.href.split('/')[5]);
+    // const journal = AssistentCache.getJournal(journalId);
+    // const gradingType = journal.gradingType;
+    // const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
+    const grade = selectedRadioButtonId === "eristav" ? "2" : "MA";
 
     await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
 
     const selectValueElements = document.querySelectorAll('md-select-value');
 
-    const emptySelectValueElements = Array.from(selectValueElements).filter(element => {
-        return element.textContent.trim() === '';
-    });
+        const emptySelectValueElements = Array.from(selectValueElements).filter(element => {
+            // Exclude elements whose row contains the specified span
+            const parentRow = element.closest('tr');
+            if (parentRow && parentRow.querySelector('span[ng-if="row.status === \'OPPURSTAATUS_A\'"]')) {
+                return false;
+            }
+            return element.textContent.trim() === '';
+        });
 
     for (const element of emptySelectValueElements) {
         try {
@@ -411,11 +478,12 @@ private static async findJournalGradeElement(nameEt: string) {
                 setTimeout(() => {
                     clearInterval(interval);
                     reject(new Error('Option not found'));
-                }, 5000);
+                }, 1000);
             });
 
             if (dropdownOption) {
                 (dropdownOption as HTMLElement).click();
+                (dropdownOption as HTMLElement).style.backgroundColor = '#40ff6d';
             }
 
             const event = new Event('change', { bubbles: true });
@@ -465,6 +533,7 @@ private static async findJournalGradeElement(nameEt: string) {
             console.error('An error occurred:', error);
         }
     }
+
 }
 }
 
