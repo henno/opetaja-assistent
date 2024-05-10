@@ -31,7 +31,7 @@ class TahvelJournal {
         }));
     }
 
-private static async findJournalGradeElement(nameEt: string) {
+    private static async findJournalGradeElement(nameEt: string) {
     // return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
     // Wait for the first <th> element to be visible
     await AssistentDom.waitForElementToBeVisible('table.journalTable th');
@@ -248,7 +248,7 @@ private static async findJournalGradeElement(nameEt: string) {
                 await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
                     // Get the selected radio button's id
                     const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
-                    console.log('Selected radio button id:', selectedRadioButtonId);
+                    TahvelJournal.clickRadioButton();
                     // Pass the id to the form or use it as needed
                     // For example, you can set it as a data attribute on the form
                     const formElement = document.querySelector('form[name="dialogForm"]');
@@ -433,84 +433,59 @@ private static async findJournalGradeElement(nameEt: string) {
             }));
     }
 
+    // Function to find and click the radio button
+    static clickRadioButton() {
+        // Find the radio button by its attributes
+        const radioButton = document.querySelector('md-radio-button[aria-label="Sisestusväljana"]');
+
+        // If the radio button is found, trigger a click event
+        if (radioButton) {
+            (radioButton as HTMLElement).click();
+        } else {
+            console.error("Radio button not found");
+        }
+    }
+
     private static async setGrade(selectedRadioButtonId) {
-    // const journalId = parseInt(window.location.href.split('/')[5]);
-    // const journal = AssistentCache.getJournal(journalId);
-    // const gradingType = journal.gradingType;
-    // const grade = gradingType === "KUTSEHINDAMISVIIS_E" ? "2" : "MA";
-    const grade = selectedRadioButtonId === "eristav" ? "2" : "MA";
+        const grade = selectedRadioButtonId === "eristav" ? "2" : "MA";
 
-    await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
+        await AssistentDom.waitForElementToBeVisible('form[name="dialogForm"]');
 
-    const selectValueElements = document.querySelectorAll('md-select-value');
+        const selectValueElements = document.querySelectorAll('.gradeAsInput');
 
-        const emptySelectValueElements = Array.from(selectValueElements).filter(element => {
-            // Exclude elements whose row contains the specified span
-            const parentRow = element.closest('tr');
-            if (parentRow && parentRow.querySelector('span[ng-if="row.status === \'OPPURSTAATUS_A\'"]')) {
-                return false;
-            }
-            return element.textContent.trim() === '';
+        // Convert NodeList to Array for easier manipulation
+        const elementsArray = Array.from(selectValueElements);
+
+        // Filter out elements whose input value is empty and parentRow does not contain the specified span
+        const elementsWithoutValue = elementsArray.filter(element => {
+            const inputElement = element.querySelector('input') as HTMLInputElement;
+            const parentRow = inputElement.closest('tr');
+            const spanElement = parentRow ? parentRow.querySelector('span[ng-if="row.status === \'OPPURSTAATUS_A\'"]') : null;
+            return inputElement && inputElement.value.trim() === '' && !spanElement;
         });
 
-    for (const element of emptySelectValueElements) {
-        try {
-            const htmlElement = element as HTMLElement;
-            htmlElement.click();
+        // Set grade for each empty input
+        elementsWithoutValue.forEach(element => {
+            const inputElement = element.querySelector('input') as HTMLInputElement;
+            inputElement.value = grade;
+            // Dispatch an input event to notify AngularJS of the input value change
+            const inputEvent = new Event('input', {bubbles: true});
+            inputElement.dispatchEvent(inputEvent);
 
-            // Wait for the md-option elements to be present in the DOM
-            await AssistentDom.waitForElement('md-option');
+            // Make the date input border green
+            inputElement.style.border = '2px solid #40ff6d';
 
-            // Log all the options for this specific dropdown
-            const options = Array.from(htmlElement.parentElement.querySelectorAll('md-option'));
-            console.log('Options:', options.map(option => option.textContent.trim()));
-
-            const dropdownOption = await new Promise((resolve, reject) => {
-                const interval = setInterval(() => {
-                    const option = options.find(option => {
-                        return option.textContent.trim() === grade;
-                    });
-                    if (option) {
-                        clearInterval(interval);
-                        resolve(option);
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(interval);
-                    reject(new Error('Option not found'));
-                }, 1000);
-            });
-
-            if (dropdownOption) {
-                (dropdownOption as HTMLElement).click();
-                (dropdownOption as HTMLElement).style.backgroundColor = '#40ff6d';
-            }
-
-            const event = new Event('change', { bubbles: true });
-            htmlElement.dispatchEvent(event);
-
-            htmlElement.style.border = '2px solid #40ff6d';
-
-            // Set the date after selecting the dropdown value
-            // Find the parent row of the current dropdown
-            const parentRow = htmlElement.closest('tr');
-            if (!parentRow) {
-                console.error("Parent row not found.");
-                return;
-            }
-
-            // Find the date input within the parent row
+            const parentRow = inputElement.closest('tr');
+            // set current date value into input[aria-label="grade date"] which is in parentRow
             const dateInput = parentRow.querySelector('input[aria-label="grade date"]') as HTMLInputElement;
+
+            // Log the selected date input field
 
             if (!dateInput) {
                 console.error("Date input field not found.");
                 return;
             }
 
-            // Log the selected date input field
-            console.log('Selected date input field:', dateInput);
-
-            // Set the value for the date input
             // Get today's date
             const today = new Date();
 
@@ -523,18 +498,15 @@ private static async findJournalGradeElement(nameEt: string) {
             dateInput.value = formattedDate;
 
             // Dispatch an input event to notify AngularJS of the input value change
-            const inputEvent = new Event('input', {bubbles: true});
-            dateInput.dispatchEvent(inputEvent);
+            const dateInputEvent = new Event('input', {bubbles: true});
+            dateInput.dispatchEvent(dateInputEvent);
 
             // Make the date input border green
             dateInput.style.border = '2px solid #40ff6d';
 
-        } catch (error) {
-            console.error('An error occurred:', error);
-        }
-    }
+        });
 
-}
+    }
 }
 
 export default TahvelJournal;
