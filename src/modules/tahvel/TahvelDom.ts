@@ -26,11 +26,11 @@ class TahvelDom {
             style: {
                 display: 'table',
                 border: '1px solid #ccc',
-                backgroundColor: '#f9f9f9',
                 padding: '20px',
                 paddingRight: '30px',
                 margin: '10px',
                 marginLeft: marginleft,
+                borderCollapse: 'collapse'
             }
         });
     }
@@ -51,7 +51,7 @@ class TahvelDom {
             style: {
                 display: 'table-row',
                 margin: '20px',
-                marginRight: '30px'
+                marginRight: '30px',
             },
             role: 'alert'
             // alertElement.setAttribute('role', 'alert');
@@ -62,8 +62,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, 'Kuupäev');
     }
@@ -72,8 +75,12 @@ class TahvelDom {
         return AssistentDom.createElement('time', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '13px 10px 10px 10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                verticalAlign: 'top',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             },
             className: 'alert-date'
         }, date);
@@ -83,8 +90,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, 'Probleemid');
     }
@@ -93,8 +103,11 @@ class TahvelDom {
         const element = AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '5px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             },
             className: 'alert-message'
         });
@@ -106,8 +119,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, 'Tegevus');
     }
@@ -116,8 +132,10 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '2px 5px 5px 5px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                verticalAlign: 'middle'
             }
         });
     }
@@ -214,8 +232,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, 'Õpiväljundid');
     }
@@ -224,9 +245,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
+                padding: '10px',
                 textAlign: 'left',
-                maxWidth: '30%'
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, name_et);
     }
@@ -235,8 +258,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+                padding: '10px',
+                textAlign: 'left',
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, 'Hindeta õpilased');
     }
@@ -246,9 +272,11 @@ class TahvelDom {
         return AssistentDom.createElement('div', {
             style: {
                 display: 'table-cell',
-                padding: '2px',
+                padding: '10px',
                 textAlign: 'left',
-                maxWidth: '30%'
+                border: '1px solid rgb(204, 204, 204)',
+                fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
+                fontSize: '12px',
             }
         }, message);
     }

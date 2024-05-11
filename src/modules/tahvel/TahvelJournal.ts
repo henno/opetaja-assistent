@@ -148,6 +148,39 @@ class TahvelJournal {
             alertsContainer.appendChild(headerRow);
             journalHeaderElement.appendChild(alertsContainer);
 
+            // Add CSS style tag to the document head
+            const style = AssistentDom.createElement('style', {}, `
+            article > section:nth-child(even) {
+                background-color: #FCFCFC !important;
+            }
+            article > section:nth-child(odd) {
+                background-color: #F5F5F5 !important;
+            }           
+            #main-content > div.ois-form-layout-padding > article > section > div.alert-message > table > tbody > tr {
+                border-bottom: 2px solid red !important;
+            }
+            #main-content article > section > div.alert-message > table > tbody > tr:last-child {
+                border-bottom: 2px solid green !important;
+            }
+            #main-content article > section > div.alert-message > table {
+                border-collapse:separate !important;
+            }
+            #main-content > article > section > div > label {
+                font-size: 12px !important;
+                font-Family: Roboto, "Helvetica Neue", sans-serif !important;
+            }
+                 
+            #gradingTypeAlert > div:first-child {
+                padding-left: 5px !important;
+                margin-top: 5px !important;
+            }
+            
+            #gradingTypeAlert > div:last-child {
+                padding-left: 5px !important;
+                margin-bottom: 5px !important;
+            }
+            `);
+            document.head.append(style);
 
             // Iterate over the discrepancies and create an alert with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
@@ -207,6 +240,7 @@ class TahvelJournal {
     static async injectMissingGradesAlerts() {
         const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
 
+        //
         if (!journalHeaderElement) {
             console.error('Journal header element not found');
             return;
@@ -262,10 +296,9 @@ class TahvelJournal {
             }
 
             /* Urmase liivakast */
-           const alertElement1 = TahvelDom.createAlert();
-            alertElement1.style.marginTop = "40px"; // Change "20px" to the amount of space you want
+            const alertElement1 = TahvelDom.createAlert();
+            alertElement1.id = 'gradingTypeAlert';
 
-            // Create the first radio button
             // Get the gradingType from the journal
             const gradingType = journal.gradingType;
 
