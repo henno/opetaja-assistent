@@ -169,7 +169,7 @@ class TahvelJournal {
                 font-size: 12px !important;
                 font-Family: Roboto, "Helvetica Neue", sans-serif !important;
             }
-                 
+            
             #gradingTypeAlert > div:first-child {
                 padding-left: 5px !important;
                 margin-top: 5px !important;
@@ -291,6 +291,17 @@ class TahvelJournal {
                     }
                     // await TahvelJournal.setJournalEntryTypeAsLesson()
                     await TahvelJournal.setGrade(selectedRadioButtonId);
+
+                        // Create a style element
+                        const style = TahvelDom.createBlinkStyle();
+                        // Append the style element to the document head
+                        document.head.append(style);
+                        // Find the save button and add a red border to it
+                        const deleteButton = await AssistentDom.waitForElement('button[ng-click="saveOutcome()"]') as HTMLElement;
+                        if (deleteButton) {
+                            deleteButton.classList.add('blink');
+                        }
+
                 }));
                 alertsContainer.appendChild(alertElement);
             }

@@ -51,7 +51,7 @@ class TahvelDom {
             style: {
                 display: 'table-row',
                 margin: '20px',
-                marginRight: '30px',
+                marginRight: '30px'
             },
             role: 'alert'
             // alertElement.setAttribute('role', 'alert');
@@ -249,7 +249,7 @@ class TahvelDom {
                 textAlign: 'left',
                 border: '1px solid rgb(204, 204, 204)',
                 fontFamily: 'Roboto, "Helvetica Neue", sans-serif',
-                fontSize: '12px',
+                fontSize: '12px'
             }
         }, name_et);
     }
