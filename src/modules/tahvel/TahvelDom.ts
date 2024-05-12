@@ -291,6 +291,24 @@ class TahvelDom {
     }
 
 
+    static createActionButton(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
+
+        return TahvelDom.createButton(color, text, async () => {
+
+            const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
+
+            if (element) {
+                element.click();
+                if (clickCallback) clickCallback();
+            } else {
+                console.error(elementOrSelector);
+                console.error('...element not found');
+            }
+        })
+
+    }
+
+
 }
 
 

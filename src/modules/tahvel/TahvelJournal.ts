@@ -93,7 +93,6 @@ class TahvelJournal {
     }
 
 
-
     static async injectAlerts() {
         const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
 
@@ -143,35 +142,27 @@ class TahvelJournal {
             // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
 
-                const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+                const dateText = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
 
                 const startLessonText = discrepancy.journalFirstLessonStartNumber === discrepancy.timetableFirstLessonStartNumber
-                    ? discrepancy.journalFirstLessonStartNumber : `<del>${(discrepancy.journalFirstLessonStartNumber)}</del><ins>${(discrepancy.timetableFirstLessonStartNumber)}</ins>`;
+                    ? discrepancy.journalFirstLessonStartNumber
+                    : `<del>${(discrepancy.journalFirstLessonStartNumber)}</del><ins>${(discrepancy.timetableFirstLessonStartNumber)}</ins>`;
 
                 const lessonCountText = discrepancy.journalLessonCount === discrepancy.timetableLessonCount
-                    ? discrepancy.journalLessonCount : `<del>${(discrepancy.journalLessonCount)}</del><ins>${(discrepancy.timetableLessonCount)}</ins>`;
+                    ? discrepancy.journalLessonCount
+                    : `<del>${(discrepancy.journalLessonCount)}</del><ins>${(discrepancy.timetableLessonCount)}</ins>`;
 
-                const actionButton = TahvelJournal.createActionButtonForAlert(discrepancy.journalLessonCount === 0 ? 'md-primary' : 'md-accent', discrepancy.journalLessonCount === 0 ? 'Lisa' : 'Muuda', discrepancy.journalLessonCount === 0 ? '[ng-click="addNewEntry()"]' : await TahvelJournal.findJournalEntryElement(discrepancy), discrepancy.journalLessonCount === 0 ? async () => {
-                    await TahvelJournal.setJournalEntryTypeAsLesson()
-                    await TahvelJournal.setJournalEntryTypeAsContactLesson()
-                    await TahvelJournal.setJournalEntryDate(discrepancy)
-                    await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy)
-                } : async () => {
-                    await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy);
-                });
+                const button = await TahvelJournal.createActionButtonForLessonDiscrepancyAction(discrepancy);
 
-
-                const tr = AssistentDom.createStructure(`
+                lessonDiscrepanciesTable.querySelector('tbody').appendChild(AssistentDom.createStructure(`
                     <tr>
-                        <td>${date}</td>
+                        <td>${dateText}</td>
                         <td>${startLessonText}</td>
                         <td>${lessonCountText}</td>
                         <td></td>
-                    </tr>`);
-
-                const td = tr.querySelector('td:last-child');
-                td.appendChild(actionButton);
-                lessonDiscrepanciesTable.querySelector('tbody').appendChild(tr);
+                    </tr>`)
+                    .querySelector('td:last-child')
+                    .appendChild(button));
 
             }
         }
@@ -219,7 +210,7 @@ class TahvelJournal {
                 alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
                 // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
-                alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Lisa',
+                alertElement.appendChild(TahvelDom.createActionButton('md-accent', 'Lisa',
                     // find journal entry element which aria-label equals missingGrade.nameEt
                     await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
                         // Get the selected radio button's id
@@ -316,11 +307,22 @@ class TahvelJournal {
         return message;
     }
 
-    static async setJournalEntryStartLessonNrAndCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
-
-        // Select the start lesson number from the dropdownx
+    static async setJournalEntryStartLessonNr(discrepancy: AssistentJournalDifference): Promise<void> {
+        // Select the start lesson number from the dropdown
         await TahvelDom.selectDropdownOption("journalEntry.startLessonNr", discrepancy.timetableFirstLessonStartNumber.toString());
 
+        // Create a style element
+        const style = TahvelDom.createBlinkStyle();
+        // Append the style element to the document head
+        document.head.append(style);
+        // Find the save button and add a red border to it
+        const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
+        if (saveButton) {
+            saveButton.classList.add('blink');
+        }
+    }
+
+    static async setJournalEntryCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
         const timetableLessons = discrepancy.timetableLessonCount;
 
         // Fill the number of lessons
@@ -335,7 +337,6 @@ class TahvelJournal {
         if (saveButton) {
             saveButton.classList.add('blink');
         }
-
     }
 
     // Function to preselect the journal entry capacity types
@@ -490,6 +491,50 @@ class TahvelJournal {
 
         });
 
+    }
+
+    private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {
+        const isLessonInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
+        const isLessonInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
+
+        let action = {
+            mode: "",
+            callback: async () => {
+            },
+            elementOrSelector: await TahvelJournal.findJournalEntryElement(discrepancy)
+        };
+
+        if (isLessonInDiaryButNotInTimetable) {
+            action.mode = "Vaata";
+            action.callback = async () => {
+                // Open the modal to delete the redundant lesson
+                // Implement the logic to open the modal here
+            };
+        } else if (isLessonInTimetableButNotInDiary) {
+            action.mode = "Lisa";
+            action.callback = async () => {
+                await TahvelJournal.setJournalEntryDate(discrepancy);
+                await TahvelJournal.setJournalEntryTypeAsContactLesson();
+                await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
+                await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+            };
+        } else {
+            action.mode = "Muuda"
+            action.callback = async () => {
+                if (discrepancy.journalFirstLessonStartNumber !== discrepancy.timetableFirstLessonStartNumber) {
+                    await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+                }
+                if (discrepancy.journalLessonCount !== discrepancy.timetableLessonCount) {
+                    await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
+                }
+            };
+        }
+
+        return TahvelDom.createActionButton(
+            action.mode,
+            action.elementOrSelector,
+            action.callback
+        );
     }
 }
 
