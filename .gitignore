@@ -44,3 +44,11 @@ keys.json
 # IDEs
 /.idea
 /.vscode
+/build/firefox-mv2-dev/icon16.plasmo.13d3ec80.png
+/build/firefox-mv2-dev/icon32.plasmo.fa2b43c0.png
+/build/firefox-mv2-dev/icon48.plasmo.1b498739.png
+/build/firefox-mv2-dev/icon64.plasmo.90132ddd.png
+/build/firefox-mv2-dev/icon128.plasmo.a731bff4.png
+/build/firefox-mv2-dev/manifest.json
+/build/firefox-mv2-dev/plasmo-default-background.ab990726.js
+/build/firefox-mv2-dev/tahvel.a4d52c1e.js

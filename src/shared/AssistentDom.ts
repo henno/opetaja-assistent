@@ -121,6 +121,20 @@ class AssistentDom {
             }, timeout);
         });
     }
+
+    static createStructure(html: string): HTMLElement | null {
+        // Create a temporary div element
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html.trim();
+
+        // Check if the HTML string is valid and contains only one root element
+        if (tempDiv.childNodes.length !== 1) {
+            console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
+            return null;
+        }
+
+        return tempDiv.firstChild as HTMLElement;
+    }
 }
 
 export default AssistentDom;

@@ -54,6 +54,9 @@ class Tahvel {
             // Fill the cache with data
             await Tahvel.refreshCache();
 
+            // Inject custom styles
+            Tahvel.injectCustomStyles();
+
             Tahvel.enhanceSPAHistoryNavigation();
             // Check missing entries
         } catch (error) {
@@ -90,24 +93,24 @@ class Tahvel {
 
     /** Injects the components to the DOM when the user navigates to a new location */
     private static async executeActionsBasedOnURL() {
-    try {
-        // Get the current URL
-        const currentUrl = window.location.href;
+        try {
+            // Get the current URL
+            const currentUrl = window.location.href;
 
-        // Find all action configs based on the URL
-        const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
+            // Find all action configs based on the URL
+            const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
 
-        for (const actionConfig of actionConfigs) {
-            // Wait for the target element to be visible
-            await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
+            for (const actionConfig of actionConfigs) {
+                // Wait for the target element to be visible
+                await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
 
-            // Execute the action
-            actionConfig.action();
+                // Execute the action
+                actionConfig.action();
+            }
+        } catch (error) {
+            console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
         }
-    } catch (error) {
-        console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
     }
-}
 
     /** Fetches the timetable entries and fills the cache with them */
     private static async refreshCache() {
@@ -181,6 +184,48 @@ class Tahvel {
         }
     }
 
+    private static injectCustomStyles() {
+        // Inject custom styles for the extension
+        document.head.appendChild(AssistentDom.createStructure(`
+            <style>
+                #assistent-table {
+                    border-collapse: collapse;
+                    font-family: Roboto, "Helvetica Neue", sans-serif;
+                    font-size: 12px;
+                    vertical-align: middle;
+                    text-align: center;
+                    color: rgb(32 32 32);
+                }
+                
+                #assistent-table th,
+                #assistent-table td {
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                }
+                
+                #assistent-table th {
+                    background-color: rgb(245, 245, 245);
+                }
+                
+                #assistent-table tr:nth-child(even) {
+                    background-color: rgb(252, 252, 252);
+                }
+                
+                #assistent-table del {
+                    background-color: #fcc;
+                    padding: 0;
+                    color: #910000;
+                    margin-right:3px;
+                }
+                
+                #assistent-table ins {
+                    background-color: #cfc;
+                    text-decoration: none;
+                    padding: 0;
+                    margin-left: 3px;
+                }
+            </style>`));
+    }
 }
 
 export default Tahvel;

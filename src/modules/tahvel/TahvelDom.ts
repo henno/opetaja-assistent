@@ -36,14 +36,23 @@ class TahvelDom {
     }
 
     static createAlertListHeader() {
-        return AssistentDom.createElement('section', {
-            style: {
-                display: 'table-row',
-                margin: '20px',
-                marginRight: '30px',
-                fontWeight: 'bold'
-            }
-        });
+        const thead = document.createElement('thead');
+        const row = document.createElement('tr');
+
+        const dateHeader = document.createElement('th');
+        dateHeader.textContent = 'Kuupäev';
+        row.appendChild(dateHeader);
+
+        const messageHeader = document.createElement('th');
+        messageHeader.textContent = 'Probleemid';
+        row.appendChild(messageHeader);
+
+        const actionHeader = document.createElement('th');
+        actionHeader.textContent = 'Tegevus';
+        row.appendChild(actionHeader);
+
+        thead.appendChild(row);
+        return thead;
     }
 
     static createAlert() {
@@ -280,6 +289,7 @@ class TahvelDom {
             }
         }, message);
     }
+
 
 }
 

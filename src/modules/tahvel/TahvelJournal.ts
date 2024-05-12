@@ -1,16 +1,15 @@
 import Api from "~src/shared/AssistentApiClient";
 import {
-    type AssistentLearningOutcomes,
     type AssistentJournalDifference,
     type AssistentJournalEntry,
+    type AssistentLearningOutcomes,
     LessonType
 } from "~src/shared/AssistentTypes";
 import {DateTime} from 'luxon';
-import type {apiJournalEntry} from "./TahvelTypes";
+import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
-import type {apiCurriculumModuleEntry, apiGradeEntry} from "./TahvelTypes";
 
 class TahvelJournal {
     static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
@@ -32,29 +31,29 @@ class TahvelJournal {
     }
 
     private static async findJournalGradeElement(nameEt: string) {
-    // return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
-    // Wait for the first <th> element to be visible
-    await AssistentDom.waitForElementToBeVisible('table.journalTable th');
+        // return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
+        // Wait for the first <th> element to be visible
+        await AssistentDom.waitForElementToBeVisible('table.journalTable th');
 
-    // Select all <th> elements within the journal table
-    const thElements = document.querySelectorAll('table.journalTable th');
+        // Select all <th> elements within the journal table
+        const thElements = document.querySelectorAll('table.journalTable th');
 
-    // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
-    const filteredElements = Array.from(thElements).filter(th => {
-        const divElement = th.querySelector('div');
-        if (!divElement) return false;
-        // const ariaLabel = divElement.getAttribute('aria-label');
-        return th.innerHTML.includes(`${nameEt}`);
-    });
-    if (filteredElements.length === 0) {
-        return null;
+        // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
+        const filteredElements = Array.from(thElements).filter(th => {
+            const divElement = th.querySelector('div');
+            if (!divElement) return false;
+            // const ariaLabel = divElement.getAttribute('aria-label');
+            return th.innerHTML.includes(`${nameEt}`);
+        });
+        if (filteredElements.length === 0) {
+            return null;
+        }
+        const spanElement = filteredElements[0].querySelector('span[ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"]') as HTMLElement;
+        if (!spanElement) {
+            return null;
+        }
+        return spanElement;
     }
-    const spanElement = filteredElements[0].querySelector('span[ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"]') as HTMLElement;
-    if (!spanElement) {
-        return null;
-    }
-    return spanElement;
-}
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async findJournalEntryElement(discrepancy: any): Promise<HTMLElement | null> {
@@ -93,21 +92,8 @@ class TahvelJournal {
         return spanElement;
     }
 
-    // If there are no journal entries for the date, but there are timetable entries, add a button to add a new journal entry
-    static createActionButtonForAlert(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
-        const actionElement = TahvelDom.createActionElement();
-        actionElement.appendChild(TahvelDom.createButton(color, text, async () => {
-            const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
-            if (element) {
 
-                element.click();
-                if (clickCallback) {
-                    clickCallback();
-                }
-            }
-        }));
-        return actionElement;
-    }
+
     static async injectAlerts() {
         const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
 
@@ -138,100 +124,56 @@ class TahvelJournal {
             const sortedDiscrepancies = discrepancies.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
             // Create a container for the alerts
-            const alertsContainer = TahvelDom.createAlertContainer('alertDiscrepancies', '0px');
+            const lessonDiscrepanciesTable = AssistentDom.createStructure(`
+                <table id="assistent-table">
+                    <thead>
+                    <tr>
+                        <th rowspan="2">Kuupäev</th>
+                        <th>Algustund</th>
+                        <th>Tundide arv</th>
+                        <th rowspan="2">Tegevus</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>`);
 
-            const headerRow = TahvelDom.createAlertListHeader();
-            headerRow.appendChild(TahvelDom.createDateHeader());
-            headerRow.appendChild(TahvelDom.createMessageHeader());
-            headerRow.appendChild(TahvelDom.createActionHeader());
+            journalHeaderElement.appendChild(lessonDiscrepanciesTable);
 
-            alertsContainer.appendChild(headerRow);
-            journalHeaderElement.appendChild(alertsContainer);
-
-            // Add CSS style tag to the document head
-            const style = AssistentDom.createElement('style', {}, `
-            article > section:nth-child(even) {
-                background-color: #FCFCFC !important;
-            }
-            article > section:nth-child(odd) {
-                background-color: #F5F5F5 !important;
-            }           
-            #main-content > div.ois-form-layout-padding > article > section > div.alert-message > table > tbody > tr {
-                border-bottom: 2px solid red !important;
-            }
-            #main-content article > section > div.alert-message > table > tbody > tr:last-child {
-                border-bottom: 2px solid green !important;
-            }
-            #main-content article > section > div.alert-message > table {
-                border-collapse:separate !important;
-            }
-            #main-content > article > section > div > label {
-                font-size: 12px !important;
-                font-Family: Roboto, "Helvetica Neue", sans-serif !important;
-            }
-            
-            #gradingTypeAlert > div:first-child {
-                padding-left: 5px !important;
-                margin-top: 5px !important;
-            }
-            
-            #gradingTypeAlert > div:last-child {
-                padding-left: 5px !important;
-                margin-bottom: 5px !important;
-            }
-            `);
-            document.head.append(style);
-
-            // Iterate over the discrepancies and create an alert with the appropriate action button
+            // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
-                const alertElement = TahvelDom.createAlert();
+
+                const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+
+                const startLessonText = discrepancy.journalFirstLessonStartNumber === discrepancy.timetableFirstLessonStartNumber
+                    ? discrepancy.journalFirstLessonStartNumber : `<del>${(discrepancy.journalFirstLessonStartNumber)}</del><ins>${(discrepancy.timetableFirstLessonStartNumber)}</ins>`;
+
+                const lessonCountText = discrepancy.journalLessonCount === discrepancy.timetableLessonCount
+                    ? discrepancy.journalLessonCount : `<del>${(discrepancy.journalLessonCount)}</del><ins>${(discrepancy.timetableLessonCount)}</ins>`;
+
+                const actionButton = TahvelJournal.createActionButtonForAlert(discrepancy.journalLessonCount === 0 ? 'md-primary' : 'md-accent', discrepancy.journalLessonCount === 0 ? 'Lisa' : 'Muuda', discrepancy.journalLessonCount === 0 ? '[ng-click="addNewEntry()"]' : await TahvelJournal.findJournalEntryElement(discrepancy), discrepancy.journalLessonCount === 0 ? async () => {
+                    await TahvelJournal.setJournalEntryTypeAsLesson()
+                    await TahvelJournal.setJournalEntryTypeAsContactLesson()
+                    await TahvelJournal.setJournalEntryDate(discrepancy)
+                    await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy)
+                } : async () => {
+                    await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy);
+                });
 
 
-                // Add the date of the discrepancy
-                alertElement.appendChild(TahvelDom.createAlertDate(DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy')));
+                const tr = AssistentDom.createStructure(`
+                    <tr>
+                        <td>${date}</td>
+                        <td>${startLessonText}</td>
+                        <td>${lessonCountText}</td>
+                        <td></td>
+                    </tr>`);
 
-                // Create a message for the discrepancy
-                const journalMessage = TahvelJournal.createMessage(discrepancy, 'journal');
-                alertElement.appendChild(TahvelDom.createMessageElement(`<table><tr><td>Tunniplaanis:</td><td>${(TahvelJournal.createMessage(discrepancy, 'timetable'))}</td></tr><tr><td>Päevikus:</td><td>${journalMessage}</td></tr></table>`));
+                const td = tr.querySelector('td:last-child');
+                td.appendChild(actionButton);
+                lessonDiscrepanciesTable.querySelector('tbody').appendChild(tr);
 
-                // Add an action button based on the discrepancy type
-                if (discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0) {
-                    // Add a button to ADD a new journal entry if there are no journal entries for the date, but there are timetable entries
-                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-primary', 'Lisa', '[ng-click="addNewEntry()"]', async () => {
-                        await TahvelJournal.setJournalEntryTypeAsLesson()
-                        await TahvelJournal.setJournalEntryTypeAsContactLesson() // can be async
-                        await TahvelJournal.setJournalEntryDate(discrepancy) // can be async
-                        await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy)
-                    }));
-
-                } else if (discrepancy.timetableLessonCount > 0
-                    && discrepancy.journalLessonCount > 0
-                    && (discrepancy.timetableLessonCount !== discrepancy.journalLessonCount || discrepancy.timetableFirstLessonStartNumber !== discrepancy.journalFirstLessonStartNumber)
-                ) {
-
-
-                    // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
-                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Muuda', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
-                        await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy);
-                    }));
-                } else if (discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0) {
-
-                    // Add a button to delete the journal entry if there are no timetable entries for the date, but there are journal entries
-                    alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-warn', 'Vaata', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
-                        // Create a style element
-                        const style = TahvelDom.createBlinkStyle();
-                        // Append the style element to the document head
-                        document.head.append(style);
-                        // Find the save button and add a red border to it
-                        const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
-                        if (deleteButton) {
-                            deleteButton.classList.add('blink');
-                        }
-                    }));
-                }
-                alertsContainer.appendChild(alertElement);
             }
-            journalHeaderElement.appendChild(alertsContainer);
         }
         // Mark that alerts have been injected
         journalHeaderElement.setAttribute('data-alerts-injected', 'true');
@@ -278,19 +220,19 @@ class TahvelJournal {
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
                 // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
                 alertElement.appendChild(TahvelJournal.createActionButtonForAlert('md-accent', 'Lisa',
-                // find journal entry element which aria-label equals missingGrade.nameEt
-                await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
-                    // Get the selected radio button's id
-                    const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
-                    TahvelJournal.clickRadioButton();
-                    // Pass the id to the form or use it as needed
-                    // For example, you can set it as a data attribute on the form
-                    const formElement = document.querySelector('form[name="dialogForm"]');
-                    if (formElement) {
-                        formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
-                    }
-                    // await TahvelJournal.setJournalEntryTypeAsLesson()
-                    await TahvelJournal.setGrade(selectedRadioButtonId);
+                    // find journal entry element which aria-label equals missingGrade.nameEt
+                    await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
+                        // Get the selected radio button's id
+                        const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
+                        TahvelJournal.clickRadioButton();
+                        // Pass the id to the form or use it as needed
+                        // For example, you can set it as a data attribute on the form
+                        const formElement = document.querySelector('form[name="dialogForm"]');
+                        if (formElement) {
+                            formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
+                        }
+                        // await TahvelJournal.setJournalEntryTypeAsLesson()
+                        await TahvelJournal.setGrade(selectedRadioButtonId);
 
                         // Create a style element
                         const style = TahvelDom.createBlinkStyle();
@@ -302,7 +244,7 @@ class TahvelJournal {
                             deleteButton.classList.add('blink');
                         }
 
-                }));
+                    }));
                 alertsContainer.appendChild(alertElement);
             }
 
@@ -534,12 +476,10 @@ class TahvelJournal {
             const today = new Date();
 
             // Format the date to the desired format (dd.mm.yyyy)
-            const formattedDate = today.getDate().toString().padStart(2, '0') + '.' +
+            // Set the value for the date input
+            dateInput.value = today.getDate().toString().padStart(2, '0') + '.' +
                 (today.getMonth() + 1).toString().padStart(2, '0') + '.' +
                 today.getFullYear();
-
-            // Set the value for the date input
-            dateInput.value = formattedDate;
 
             // Dispatch an input event to notify AngularJS of the input value change
             const dateInputEvent = new Event('input', {bubbles: true});
