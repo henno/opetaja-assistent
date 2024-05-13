@@ -36,8 +36,10 @@ class AssistentDom {
                 return;
             }
 
+            console.log(`Element ${selector} not found, observing...`);
             const observer = new MutationObserver((mutations, observer) => {
                 const element = document.querySelector(selector);
+                console.log('Observing element:', element);
                 if (element) {
                     resolve(element);
                     observer.disconnect();
@@ -122,19 +124,35 @@ class AssistentDom {
         });
     }
 
-    static createStructure(html: string): HTMLElement | null {
-        // Create a temporary div element
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html.trim();
+static createStructure(html: string): HTMLElement | null {
+    // Check if the HTML string starts with a tr tag
+    const startsWithTr = html.trim().startsWith('<tr');
 
-        // Check if the HTML string is valid and contains only one root element
-        if (tempDiv.childNodes.length !== 1) {
-            console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
-            return null;
-        }
-
-        return tempDiv.firstChild as HTMLElement;
+    // If the HTML string starts with a tr tag, wrap it in table tags
+    if (startsWithTr) {
+        html = `<table>${html}</table>`;
     }
-}
+
+    // Create a temporary div element
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html.trim();
+
+    // Check if the HTML string is valid and contains only one root element
+    if (tempDiv.childNodes.length !== 1) {
+        console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
+        return null;
+    }
+
+    // Get the root element
+    let rootElement = tempDiv.firstChild as HTMLElement;
+
+    // If the HTML string started with a tr tag, the root element will be a table
+    // In this case, get the first tr element from the table
+    if (startsWithTr && rootElement.tagName.toLowerCase() === 'table') {
+        rootElement = rootElement.querySelector('tr') as HTMLElement;
+    }
+
+    return rootElement;
+}}
 
 export default AssistentDom;

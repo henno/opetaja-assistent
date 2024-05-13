@@ -292,7 +292,6 @@ class TahvelDom {
 
 
     static createActionButton(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
-
         return TahvelDom.createButton(color, text, async () => {
 
             const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;

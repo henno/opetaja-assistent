@@ -204,12 +204,20 @@ class Tahvel {
                     padding: 10px;
                 }
                 
-                #assistent-table th {
-                    background-color: rgb(245, 245, 245);
+                #assistent-table th, #assistent-table td:first-child, #alertElementContainer tr:last-child  {
+                    background-color: #FAFAFA;
                 }
                 
                 #assistent-table tr:nth-child(even) {
-                    background-color: rgb(252, 252, 252);
+                    background-color: #F5F5F5;
+                }
+                
+                #assistent-table tr:nth-child(odd) {
+                    background-color: #FCFCFC;
+                }
+                
+                #assistent-table tr td:first-child {
+                    max-width: 300px;
                 }
                 
                 #assistent-table del {
@@ -224,6 +232,15 @@ class Tahvel {
                     text-decoration: none;
                     padding: 0;
                     margin-left: 3px;
+                }
+                
+                td.align-left {
+                    text-align: left;
+                }
+                
+                #alertMissingGrades {
+                    margin-top: 20px; 
+                    margin-left: 18px;
                 }
             </style>`));
     }

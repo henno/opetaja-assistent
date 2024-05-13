@@ -161,15 +161,20 @@ class TahvelJournal {
 
                 const button = await TahvelJournal.createActionButtonForLessonDiscrepancyAction(discrepancy);
 
-                lessonDiscrepanciesTable.querySelector('tbody').appendChild(AssistentDom.createStructure(`
+                // Create a row for the table
+                const tr = AssistentDom.createStructure(`
                     <tr>
                         <td>${dateText}</td>
                         <td>${startLessonText}</td>
                         <td>${lessonCountText}</td>
                         <td></td>
-                    </tr>`)
-                    .querySelector('td:last-child')
-                    .appendChild(button));
+                    </tr>`);
+
+                // Append the button to the last cell in the row
+                tr.querySelector('td:last-child').appendChild(button);
+
+                // Append the row to the table body
+                lessonDiscrepanciesTable.querySelector('tbody').appendChild(tr);
 
             }
         }
@@ -178,9 +183,10 @@ class TahvelJournal {
     }
 
     static async addMissingGradesTable() {
+        // Find the journal header element
         const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
 
-        //
+        // Check if the journal header element is found
         if (!journalHeaderElement) {
             console.error('Journal header element not found');
             return;
@@ -191,57 +197,73 @@ class TahvelJournal {
             return;
         }
 
+        // Get the journal with validation
         const journal = await TahvelJournal.getJournalWithValidation();
         if (!journal) return;
 
+        // Get the missing grades from the journal
         const missingGrades = journal.missingGrades
+
         // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
         if (missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
-            const alertsContainer = TahvelDom.createAlertContainer('alertMissingGrades', '20px');
-            const headerRow = TahvelDom.createAlertListHeader();
-            headerRow.appendChild(TahvelDom.createGradesHeader());
-            headerRow.appendChild(TahvelDom.createStudentsWithoutGradesListHeader());
-            headerRow.appendChild(TahvelDom.createActionHeader());
-            alertsContainer.appendChild(headerRow);
-            journalHeaderElement.appendChild(alertsContainer);
+
+            // Create a skeleton for the table
+            const missingGradesTable = AssistentDom.createStructure(`
+                <div id="alertMissingGrades">
+                    <table id="assistent-table">
+                        <thead>
+                        <tr>
+                            <th rowspan="2">Õpiväljund</th>
+                            <th>Hindeta õpilased</th>
+                            <th rowspan="2">Tegevus</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>`);
+
+            // add before journalHeaderElement
+            journalHeaderElement.before(missingGradesTable);
 
             for (const missingGrade of missingGrades) {
                 const alertElement = TahvelDom.createAlert();
                 alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
                 alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
-                // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
-                alertElement.appendChild(TahvelDom.createActionButton('md-accent', 'Lisa',
-                    // find journal entry element which aria-label equals missingGrade.nameEt
+
+                // Convert each student object to a string
+                const studentListString = missingGrade.studentList.map(student => `${student.fullname}`).join(', ');
+
+                // Create a row for the table
+                const tr = AssistentDom.createStructure(`
+                    <tr>
+                        <td class="align-left">${missingGrade.nameEt}</td>
+                        <td class="align-left">${studentListString}</td> <!-- Display the students as a string here -->
+                        <td></td>
+                    </tr>`);
+
+                const button = TahvelDom.createActionButton('md-accent', 'Lisa',
                     await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
-                        // Get the selected radio button's id
                         const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
                         TahvelJournal.clickRadioButton();
-                        // Pass the id to the form or use it as needed
-                        // For example, you can set it as a data attribute on the form
                         const formElement = document.querySelector('form[name="dialogForm"]');
                         if (formElement) {
                             formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
                         }
-                        // await TahvelJournal.setJournalEntryTypeAsLesson()
                         await TahvelJournal.setGrade(selectedRadioButtonId);
 
-                        // Create a style element
                         const style = TahvelDom.createBlinkStyle();
-                        // Append the style element to the document head
                         document.head.append(style);
-                        // Find the save button and add a red border to it
                         const deleteButton = await AssistentDom.waitForElement('button[ng-click="saveOutcome()"]') as HTMLElement;
                         if (deleteButton) {
                             deleteButton.classList.add('blink');
                         }
+                    });
 
-                    }));
-                alertsContainer.appendChild(alertElement);
+                tr.querySelector('td:last-child').appendChild(button);
+
+                missingGradesTable.querySelector('tbody').appendChild(tr);
             }
-
-            /* Urmase liivakast */
-            const alertElement1 = TahvelDom.createAlert();
-            alertElement1.id = 'gradingTypeAlert';
 
             // Get the gradingType from the journal
             const gradingType = journal.gradingType;
@@ -259,11 +281,6 @@ class TahvelJournal {
             label1.htmlFor = 'mitteeristav';
             label1.textContent = 'Mitteeristav hindamine';
 
-            // Wrap radio button and label in a div
-            const div1 = document.createElement('div');
-            div1.appendChild(radioButton1);
-            div1.appendChild(label1);
-
             // Create the second radio button
             const radioButton2 = document.createElement('input');
             radioButton2.type = 'radio';
@@ -277,19 +294,25 @@ class TahvelJournal {
             label2.htmlFor = 'eristav';
             label2.textContent = 'Eristav hindamine';
 
-            // Wrap radio button and label in a div
-            const div2 = document.createElement('div');
-            div2.appendChild(radioButton2);
-            div2.appendChild(label2);
+            // Create a row for the table
+            const tr1 = AssistentDom.createStructure(`
+                    <tr id="alertElementContainer">
+                        <td colspan="3" class="align-left"></td>
+                    </tr>`);
 
-            // Append the divs to the alert element
-            alertElement1.appendChild(div1);
-            alertElement1.appendChild(div2);
+            // Append the alertElement1 to the td with id "alertElementContainer"
+            const tdElement = tr1.querySelector('#alertElementContainer td:first-child');
 
-            alertsContainer.appendChild(alertElement1);
-            /* Urmase liivakast END */
+            // Append the radio buttons and labels to the td element
+            tdElement.appendChild(radioButton1);
+            tdElement.appendChild(label1);
+            tdElement.appendChild(document.createElement('br')); // Add a line break
+            tdElement.appendChild(radioButton2);
+            tdElement.appendChild(label2);
+            tdElement.appendChild(document.createElement('br')); // Add a line break
 
-            journalHeaderElement.before(alertsContainer);
+            // Append the row to the table body
+            missingGradesTable.querySelector('tbody').appendChild(tr1);
         }
     }
 
@@ -519,7 +542,15 @@ class TahvelJournal {
         } else if (isLessonsInTimetableButNotInDiary) {
             action.color = "md-primary";
             action.text = "Lisa";
+            action.elementOrSelector = await AssistentDom.waitForElement('button[ng-click="addNewEntry()"]') as HTMLElement;
+
+            if(!action.elementOrSelector) {
+                // debugger;
+                console.error("Add button not found");
+                return;
+            }
             action.callback = async () => {
+                await TahvelJournal.setJournalEntryTypeAsLesson();
                 await TahvelJournal.setJournalEntryDate(discrepancy);
                 await TahvelJournal.setJournalEntryTypeAsContactLesson();
                 await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
@@ -530,10 +561,10 @@ class TahvelJournal {
             action.text = "Muuda";
             action.callback = async () => {
                 if (discrepancy.journalFirstLessonStartNumber !== discrepancy.timetableFirstLessonStartNumber) {
-                    await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+                    await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
                 }
                 if (discrepancy.journalLessonCount !== discrepancy.timetableLessonCount) {
-                    await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
+                    await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
                 }
             };
         }
