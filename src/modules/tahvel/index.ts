@@ -10,10 +10,10 @@ import AssistentDom from "~src/shared/AssistentDom";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
 import {type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
 
-const urlJournalsList = '/#/journals(\\?_menu)?';
-const urlJournalEdit = '#/journal/\\d+/edit';
-const elementJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
-const elementJournalEdit = `#journalEntriesByDate`;
+const urlForJournalsList = '/#/journals(\\?_menu)?';
+const urlForJournalEdit = '#/journal/\\d+/edit';
+const linksInJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
+const elementInJournalEdit = `#journalEntriesByDate`;
 
 class Tahvel {
 
@@ -21,21 +21,21 @@ class Tahvel {
     static actions = [
         {
             description: 'Inject warning triangles to journal list when there are discrepancies or missing grades',
-            urlFragment: new RegExp(urlJournalsList),
-            elementToWaitFor: elementJournalList,
-            action: TahvelJournalList.injectAlerts
+            urlFragment: new RegExp(urlForJournalsList),
+            elementToWaitFor: linksInJournalList,
+            action: TahvelJournalList.addWarningTriangles
         },
         {
-            description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
-            urlFragment: new RegExp(urlJournalEdit),
-            elementToWaitFor: elementJournalEdit,
-            action: TahvelJournal.injectAlerts
+            description: 'Inject a table to journal pages when there are discrepancies between timetable and journal',
+            urlFragment: new RegExp(urlForJournalEdit),
+            elementToWaitFor: elementInJournalEdit,
+            action: TahvelJournal.addLessonDiscrepanciesTable
         },
         {
             description: 'Inject alerts to journal pages when there are missing grades',
-            urlFragment: new RegExp(urlJournalEdit),
-            elementToWaitFor: elementJournalEdit,
-            action: TahvelJournal.injectMissingGradesAlerts
+            urlFragment: new RegExp(urlForJournalEdit),
+            elementToWaitFor: elementInJournalEdit,
+            action: TahvelJournal.addMissingGradesTable
         }
     ];
 
@@ -55,7 +55,7 @@ class Tahvel {
             await Tahvel.refreshCache();
 
             // Inject custom styles
-            Tahvel.injectCustomStyles();
+            Tahvel.addCustomStyles();
 
             Tahvel.enhanceSPAHistoryNavigation();
             // Check missing entries
@@ -184,7 +184,8 @@ class Tahvel {
         }
     }
 
-    private static injectCustomStyles() {
+    /** Injects additional styles for the extension to the DOM */
+    private static addCustomStyles() {
         // Inject custom styles for the extension
         document.head.appendChild(AssistentDom.createStructure(`
             <style>

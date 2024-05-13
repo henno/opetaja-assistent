@@ -1,5 +1,6 @@
 import Api from "~src/shared/AssistentApiClient";
 import {
+    type AssistentJournal,
     type AssistentJournalDifference,
     type AssistentJournalEntry,
     type AssistentLearningOutcomes,
@@ -31,8 +32,8 @@ class TahvelJournal {
     }
 
     private static async findJournalGradeElement(nameEt: string) {
-        // return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
-        // Wait for the first <th> element to be visible
+
+        // Return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
         await AssistentDom.waitForElementToBeVisible('table.journalTable th');
 
         // Select all <th> elements within the journal table
@@ -45,13 +46,16 @@ class TahvelJournal {
             // const ariaLabel = divElement.getAttribute('aria-label');
             return th.innerHTML.includes(`${nameEt}`);
         });
+
         if (filteredElements.length === 0) {
             return null;
         }
+
         const spanElement = filteredElements[0].querySelector('span[ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"]') as HTMLElement;
         if (!spanElement) {
             return null;
         }
+
         return spanElement;
     }
 
@@ -92,37 +96,40 @@ class TahvelJournal {
         return spanElement;
     }
 
-
-    static async injectAlerts() {
-        const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
-
-        if (!journalHeaderElement) {
-            console.error('Journal header element not found');
-            return;
-        }
-
-        // Check if alerts have already been injected
-        if (journalHeaderElement.getAttribute('data-alerts-injected') === 'true') {
-            return;
-        }
-
+    static async getJournalWithValidation(): Promise<AssistentJournal | null> {
         const journalId = parseInt(window.location.href.split('/')[5]);
+
         if (!journalId) {
             console.error('Journal ID ' + journalId + ' not found in URL');
-            return;
+            return null;
         }
         const journal = AssistentCache.getJournal(journalId)
         if (!journal) {
             console.error('Journal ' + journalId + ' not found in cache');
+            return null;
+        }
+
+        return journal;
+    }
+
+    static async addLessonDiscrepanciesTable() {
+        const journalHeaderElement = document.querySelector('.ois-form-layout-padding') as HTMLElement;
+
+        if (!journalHeaderElement) {
+            console.error('Journal header element not found to inject lesson discrepancies table');
             return;
         }
-        const discrepancies = journal.differencesToTimetable
 
-        if (discrepancies.length) {
+        const journal = await this.getJournalWithValidation();
+        if (!journal) {
+            return;
+        }
 
-            const sortedDiscrepancies = discrepancies.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        if (journal.differencesToTimetable.length) {
 
-            // Create a container for the alerts
+            const sortedDiscrepancies = journal.differencesToTimetable.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            // Create a skeleton for the table
             const lessonDiscrepanciesTable = AssistentDom.createStructure(`
                 <table id="assistent-table">
                     <thead>
@@ -166,11 +173,11 @@ class TahvelJournal {
 
             }
         }
-        // Mark that alerts have been injected
-        journalHeaderElement.setAttribute('data-alerts-injected', 'true');
+        // Mark that lesson discrepancies table has been injected
+        journalHeaderElement.dataset.lessonDiscrepanciesTableIsInjected = 'true';
     }
 
-    static async injectMissingGradesAlerts() {
+    static async addMissingGradesTable() {
         const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
 
         //
@@ -180,20 +187,13 @@ class TahvelJournal {
         }
 
         // Check if alerts have already been injected
-        if (journalHeaderElement.getAttribute('data-alerts-injected') === 'true') {
+        if (journalHeaderElement.getAttribute('data-lesson-discrepancies-table-is-injected') === 'true') {
             return;
         }
 
-        const journalId = parseInt(window.location.href.split('/')[5]);
-        if (!journalId) {
-            console.error('Journal ID ' + journalId + ' not found in URL');
-            return;
-        }
-        const journal = AssistentCache.getJournal(journalId)
-        if (!journal) {
-            console.error('Journal ' + journalId + ' not found in cache');
-            return;
-        }
+        const journal = await this.getJournalWithValidation();
+        if (!journal) return;
+
         const missingGrades = journal.missingGrades
         // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
         if (missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
@@ -494,24 +494,31 @@ class TahvelJournal {
     }
 
     private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {
-        const isLessonInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
-        const isLessonInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
+        const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
+        const isLessonsInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
 
-        let action = {
-            mode: "",
+        const action = {
+            color: "",
+            text: "",
+            elementOrSelector: await TahvelJournal.findJournalEntryElement(discrepancy),
             callback: async () => {
             },
-            elementOrSelector: await TahvelJournal.findJournalEntryElement(discrepancy)
         };
 
-        if (isLessonInDiaryButNotInTimetable) {
-            action.mode = "Vaata";
+        if (isLessonsInDiaryButNotInTimetable) {
+            action.color = "md-warn";
+            action.text = "Vaata";
             action.callback = async () => {
-                // Open the modal to delete the redundant lesson
-                // Implement the logic to open the modal here
+                const style = TahvelDom.createBlinkStyle();
+                document.head.append(style);
+                const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
+                if (deleteButton) {
+                    deleteButton.classList.add('blink');
+                }
             };
-        } else if (isLessonInTimetableButNotInDiary) {
-            action.mode = "Lisa";
+        } else if (isLessonsInTimetableButNotInDiary) {
+            action.color = "md-primary";
+            action.text = "Lisa";
             action.callback = async () => {
                 await TahvelJournal.setJournalEntryDate(discrepancy);
                 await TahvelJournal.setJournalEntryTypeAsContactLesson();
@@ -519,7 +526,8 @@ class TahvelJournal {
                 await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
             };
         } else {
-            action.mode = "Muuda"
+            action.color = "md-accent";
+            action.text = "Muuda";
             action.callback = async () => {
                 if (discrepancy.journalFirstLessonStartNumber !== discrepancy.timetableFirstLessonStartNumber) {
                     await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
@@ -531,7 +539,8 @@ class TahvelJournal {
         }
 
         return TahvelDom.createActionButton(
-            action.mode,
+            action.color,
+            action.text,
             action.elementOrSelector,
             action.callback
         );

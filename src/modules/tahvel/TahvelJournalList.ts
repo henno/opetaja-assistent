@@ -2,7 +2,7 @@ import {AssistentCache} from '~src/shared/AssistentCache';
 import TahvelDom from "~src/modules/tahvel/TahvelDom";
 
 class TahvelJournalList {
-    static injectAlerts() {
+    static addWarningTriangles() {
 
         try {
             const journalsListTableRowsSelector = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
@@ -46,7 +46,7 @@ class TahvelJournalList {
             });
 
         } catch (error) {
-            console.error('Error in TahvelJournalList.injectAlerts:', error);
+            console.error('Error in TahvelJournalList.addWarningTriangles:', error);
         }
     }
 }
