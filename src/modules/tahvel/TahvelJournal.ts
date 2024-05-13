@@ -120,7 +120,7 @@ class TahvelJournal {
             return;
         }
 
-        const journal = await this.getJournalWithValidation();
+        const journal = await TahvelJournal.getJournalWithValidation();
         if (!journal) {
             return;
         }
@@ -191,7 +191,7 @@ class TahvelJournal {
             return;
         }
 
-        const journal = await this.getJournalWithValidation();
+        const journal = await TahvelJournal.getJournalWithValidation();
         if (!journal) return;
 
         const missingGrades = journal.missingGrades
