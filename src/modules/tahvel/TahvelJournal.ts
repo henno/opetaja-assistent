@@ -33,9 +33,6 @@ class TahvelJournal {
 
     private static async findJournalGradeElement(nameEt: string) {
 
-        // Return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
-        await AssistentDom.waitForElementToBeVisible('table.journalTable th');
-
         // Select all <th> elements within the journal table
         const thElements = document.querySelectorAll('table.journalTable th');
 
@@ -65,9 +62,6 @@ class TahvelJournal {
         const day = discrepancyDate.getUTCDate().toString().padStart(2, '0');
         const month = (discrepancyDate.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-based in JS
         const date = `${day}.${month}`;
-
-        // Wait for the first <th> element to be visible
-        await AssistentDom.waitForElementToBeVisible('table.journalTable th');
 
         // Select all <th> elements within the journal table
         const thElements = document.querySelectorAll('table.journalTable th');
@@ -145,6 +139,9 @@ class TahvelJournal {
                 </table>`);
 
             journalHeaderElement.appendChild(lessonDiscrepanciesTable);
+
+            // Wait for the first <th> element to be visible
+            await AssistentDom.waitForElement('table.journalTable th');
 
             // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
@@ -225,6 +222,9 @@ class TahvelJournal {
 
             // add before journalHeaderElement
             journalHeaderElement.before(missingGradesTable);
+
+            // Return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
+            await AssistentDom.waitForElement('table.journalTable th');
 
             for (const missingGrade of missingGrades) {
                 const alertElement = TahvelDom.createAlert();

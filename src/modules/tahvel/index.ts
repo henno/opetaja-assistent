@@ -102,7 +102,7 @@ class Tahvel {
 
             for (const actionConfig of actionConfigs) {
                 // Wait for the target element to be visible
-                await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
+                await AssistentDom.waitForElement(actionConfig.elementToWaitFor);
 
                 // Execute the action
                 actionConfig.action();
