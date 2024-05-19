@@ -58,52 +58,28 @@ class TahvelJournal {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async findJournalEntryElement(discrepancy: any): Promise<HTMLElement | null> {
+        //console.log(`%cExecuting function ${arguments.callee.name}`, "color: blue;");
+
+        // Extract and format the discrepancy date as 'dd.mm'
         const discrepancyDate = new Date(discrepancy.date);
         const day = discrepancyDate.getUTCDate().toString().padStart(2, '0');
-        const month = (discrepancyDate.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-based in JS
-        const date = `${day}.${month}`;
+        const month = (discrepancyDate.getUTCMonth() + 1).toString().padStart(2, '0');
+        const formattedDate = `${day}.${month}`;
 
-        // Select all <th> elements within the journal table
-
-        // Artificial delay to wait for the table to load
-        //await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait until the first <td> element is present in the journal entries table
+        //await AssistentDom.waitForElement('#journalEntriesByDate > table > tbody > tr > td');
 
 
-        const thElementsWaited = await AssistentDom.waitForElement('table.journalTable th');
-        console.log('Current time: ${timestampInMicroseconds.toFixed(0)}μs findJournalEntryElement thElementsWaited:', thElementsWaited);
-        if (!thElementsWaited) {
-            console.error('thElementsWaited NOT FOUND!');
-            return;
-        }
-        const thElements = document.querySelectorAll('table.journalTable th');
-        console.log('findJournalEntryElement thElements:', thElements);
-        if (!thElements) {
-            console.error('thElements NOT FOUND!');
-            return;
-        }
-
-        // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
-        const filteredElements = Array.from(thElements).filter(th => {
-            const divElement = th.querySelector('div');
-            if (!divElement) return false; // If there's no <div>, skip this <th>
-
-            const ariaLabel = divElement.getAttribute('aria-label');
-            return th.textContent.includes(`${date}`) && !ariaLabel.includes("Iseseisev töö");
+        // Find the table header containing the formatted date and no 'Iseseisev töö' div
+        const th = Array.from(document.querySelectorAll('table.journalTable th')).find(th => {
+            const hasTheDate = Array.from(th.querySelectorAll('span')).some(span => span.textContent.includes(formattedDate));
+            const isNotIndependentWork = !th.querySelector('div[aria-label*="Iseseisev töö"]');
+            return hasTheDate && isNotIndependentWork;
         });
 
-        // If no elements found, return null
-        if (filteredElements.length === 0) {
-            return null;
-        }
-
-        // Select the desired span element within the first found <th> element
-        const spanElement = filteredElements[0].querySelector('span[ng-if="journalEntry.entryType.code !== \'SISSEKANNE_L\'"]') as HTMLElement;
-        if (!spanElement) {
-            return null;
-        }
-
-        // Return the selected span element
-        return spanElement;
+        // Extract and return the target span element if found, otherwise return null
+        const targetSpan = th?.querySelector('span[ng-if="journalEntry.entryType.code !== \'SISSEKANNE_L\'"]') as HTMLElement;
+        return targetSpan || null;
     }
 
     static async getJournalWithValidation(): Promise<AssistentJournal | null> {
@@ -156,28 +132,31 @@ class TahvelJournal {
 
             journalHeaderElement.appendChild(lessonDiscrepanciesTable);
 
-            // Wait for the first <th> element to be visible
-            const tableJournalTable = await AssistentDom.waitForElement('table.journalTable th');
-            if (!tableJournalTable) {
-                console.error('tableJournalTable NOT FOUND!');
-
+            // Wait for the first <td> element to be visible
+            try {
+                await AssistentDom.waitForElement('table.journalTable tbody tr td');
+            } catch (e) {
+                console.error('tableJournalTable NOT FOUND!' + e.message);
                 return;
             }
 
-            console.log('addLessonDiscrepanciesTable tableJournalTable:', tableJournalTable);
-
             // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
-
                 const dateText = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
 
-                const startLessonText = discrepancy.journalFirstLessonStartNumber === discrepancy.timetableFirstLessonStartNumber
-                    ? discrepancy.journalFirstLessonStartNumber
-                    : `<del>${(discrepancy.journalFirstLessonStartNumber)}</del><ins>${(discrepancy.timetableFirstLessonStartNumber)}</ins>`;
+                let startLessonText: string | number;
+                if (discrepancy.journalFirstLessonStartNumber === 0 || discrepancy.journalFirstLessonStartNumber === discrepancy.timetableFirstLessonStartNumber) {
+                    startLessonText = discrepancy.timetableFirstLessonStartNumber;
+                } else {
+                    startLessonText = `<del>${discrepancy.journalFirstLessonStartNumber}</del><ins>${discrepancy.timetableFirstLessonStartNumber}</ins>`;
+                }
 
-                const lessonCountText = discrepancy.journalLessonCount === discrepancy.timetableLessonCount
-                    ? discrepancy.journalLessonCount
-                    : `<del>${(discrepancy.journalLessonCount)}</del><ins>${(discrepancy.timetableLessonCount)}</ins>`;
+                let lessonCountText: string | number;
+                if (discrepancy.journalLessonCount === 0 || discrepancy.journalLessonCount === discrepancy.timetableLessonCount) {
+                    lessonCountText = discrepancy.timetableLessonCount;
+                } else {
+                    lessonCountText = `<del>${discrepancy.journalLessonCount}</del><ins>${discrepancy.timetableLessonCount}</ins>`;
+                }
 
                 const button = await TahvelJournal.createActionButtonForLessonDiscrepancyAction(discrepancy);
 
@@ -195,7 +174,6 @@ class TahvelJournal {
 
                 // Append the row to the table body
                 lessonDiscrepanciesTable.querySelector('tbody').appendChild(tr);
-
             }
         }
         // Mark that lesson discrepancies table has been injected
@@ -545,12 +523,15 @@ class TahvelJournal {
         const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
         const isLessonsInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
 
-        const journalEntryElement = await TahvelJournal.findJournalEntryElement(discrepancy);
-        if (!journalEntryElement) {
-            console.error('journalEntryElement NOT FOUND!');
+        let journalEntryElement: HTMLElement;
+
+        try {
+            journalEntryElement = await TahvelJournal.findJournalEntryElement(discrepancy);
+        } catch (e) {
+            console.error('Journal entry element not found: ' + e.message);
             return;
         }
-        console.log('createActionButtonForLessonDiscrepancyAction journalEntryElement:', journalEntryElement);
+
         const action = {
             color: "",
             text: "",
@@ -575,7 +556,7 @@ class TahvelJournal {
             action.text = "Lisa";
             action.elementOrSelector = await AssistentDom.waitForElement('button[ng-click="addNewEntry()"]') as HTMLElement;
 
-            if(!action.elementOrSelector) {
+            if (!action.elementOrSelector) {
                 // debugger;
                 console.error("Add button not found");
                 return;

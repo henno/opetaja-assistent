@@ -13,7 +13,7 @@ import {type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
 const urlForJournalsList = '/#/journals(\\?_menu)?';
 const urlForJournalEdit = '#/journal/\\d+/edit';
 const linksInJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
-const elementInJournalEdit = `#journalEntriesByDate`;
+const elementInJournalEdit = `#journalEntriesByDate > table > thead > tr > th:nth-child(1)`;
 
 class Tahvel {
 
@@ -43,6 +43,7 @@ class Tahvel {
     static async init(): Promise<void> {
 
         try {
+
             // Set the base URL for the API
             Api.url = Api.extractBaseUrl() + "hois_back";
 
@@ -58,7 +59,7 @@ class Tahvel {
             Tahvel.addCustomStyles();
 
             Tahvel.enhanceSPAHistoryNavigation();
-            // Check missing entries
+
         } catch (error) {
             console.error('Error in Tahvel.init:', error);
         }
@@ -72,19 +73,16 @@ class Tahvel {
 
             // Do stuff when the user navigates to a new page
             history.pushState = function (...args) {
-                console.log('Pushing state...');
                 originalPushState.apply(this, args);
                 Tahvel.executeActionsBasedOnURL()
             };
 
             // Do stuff when the user navigates back
             window.addEventListener('popstate', () => {
-                console.log('Popping state...');
                 Tahvel.executeActionsBasedOnURL();
             });
 
             // Execute actions based on the initial URL
-            console.log('Executing actions based on initial URL...');
             Tahvel.executeActionsBasedOnURL();
 
         } catch (error) {
@@ -94,7 +92,7 @@ class Tahvel {
 
     /** Injects the components to the DOM when the user navigates to a new location */
     private static async executeActionsBasedOnURL() {
-        console.log('Executing actions based on URL...')
+
         try {
             // Get the current URL
             const currentUrl = window.location.href;
@@ -103,14 +101,9 @@ class Tahvel {
             const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
 
             for (const actionConfig of actionConfigs) {
-                const ts = performance.now();
-                console.log(ts);
-                console.log(`Current time: ${(ts / 1000).toFixed(6)}s. Waiting to execute action for:`, actionConfig.description);
                 await AssistentDom.waitForElement(actionConfig.elementToWaitFor);
 
                 // Execute the action
-
-                console.log(`Current time: ${(performance.now() / 1000).toFixed(6)}s. Executing action:`, actionConfig.description);
                 actionConfig.action();
             }
         } catch (error) {

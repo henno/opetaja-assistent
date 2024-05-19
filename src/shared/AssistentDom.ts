@@ -28,20 +28,51 @@ class AssistentDom {
         return element;
     }
 
-    static waitForElement(selector: string, timeout = 3000): Promise<Element | null> {
-        return new Promise((resolve, reject) => {
-            const interval = setInterval(() => {
-                console.log('Checking for element ' + selector + '...');
-                const element = document.querySelector(selector);
-                if (element) {
-                    clearInterval(interval);
-                    resolve(element);
-                }
-            }, 5); // Check every 100ms
+    static async waitForElement(selector, timeout = 2000): Promise<HTMLElement> {
 
+        return new Promise((resolve, reject) => {
+
+            // Initial check for the element
+            const element = document.querySelector(selector);
+            if (element) {
+                resolve(element);
+                return;
+            }
+
+            console.log(`Element ${selector} not found, polling...`);
+
+            let resolved = false;
+
+            // Poll for the element every 100ms (can't use MutationObserver because it doesn't detect all changes)
+            const intervalId = setInterval(() => {
+                const targetElement = document.querySelector(selector);
+                if (targetElement) {
+                    console.log("%cElement %s found!", "color: green;", selector);
+                    if (!resolved) {
+                        resolved = true;
+                        clearInterval(intervalId);
+                        resolve(targetElement);
+                    } else {
+                        console.log("%cElement %s found but already resolved", "color: gold;", selector);
+                    }
+                }
+            }, 100);
+
+            // Stop polling after the timeout
             setTimeout(() => {
-                clearInterval(interval);
-                reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+                if (!resolved) {
+                    resolved = true;
+                    clearInterval(intervalId);
+
+                    const targetElement = document.querySelector(selector);
+                    if (targetElement) {
+                        console.log("%cElement %s found after timeout", "color: gold;", selector);
+                        resolve(targetElement);
+                    } else {
+                        console.log("%cElement %s still not found", "color: red;", selector);
+                        reject(new Error(`Element ${selector} not found within ${timeout / 1000} sec time limit`));
+                    }
+                }
             }, timeout);
         });
     }
@@ -114,35 +145,36 @@ class AssistentDom {
         });
     }
 
-static createStructure(html: string): HTMLElement | null {
-    // Check if the HTML string starts with a tr tag
-    const startsWithTr = html.trim().startsWith('<tr');
+    static createStructure(html: string): HTMLElement | null {
+        // Check if the HTML string starts with a tr tag
+        const startsWithTr = html.trim().startsWith('<tr');
 
-    // If the HTML string starts with a tr tag, wrap it in table tags
-    if (startsWithTr) {
-        html = `<table>${html}</table>`;
+        // If the HTML string starts with a tr tag, wrap it in table tags
+        if (startsWithTr) {
+            html = `<table>${html}</table>`;
+        }
+
+        // Create a temporary div element
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html.trim();
+
+        // Check if the HTML string is valid and contains only one root element
+        if (tempDiv.childNodes.length !== 1) {
+            console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
+            return null;
+        }
+
+        // Get the root element
+        let rootElement = tempDiv.firstChild as HTMLElement;
+
+        // If the HTML string started with a tr tag, the root element will be a table
+        // In this case, get the first tr element from the table
+        if (startsWithTr && rootElement.tagName.toLowerCase() === 'table') {
+            rootElement = rootElement.querySelector('tr') as HTMLElement;
+        }
+
+        return rootElement;
     }
-
-    // Create a temporary div element
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html.trim();
-
-    // Check if the HTML string is valid and contains only one root element
-    if (tempDiv.childNodes.length !== 1) {
-        console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
-        return null;
-    }
-
-    // Get the root element
-    let rootElement = tempDiv.firstChild as HTMLElement;
-
-    // If the HTML string started with a tr tag, the root element will be a table
-    // In this case, get the first tr element from the table
-    if (startsWithTr && rootElement.tagName.toLowerCase() === 'table') {
-        rootElement = rootElement.querySelector('tr') as HTMLElement;
-    }
-
-    return rootElement;
-}}
+}
 
 export default AssistentDom;
