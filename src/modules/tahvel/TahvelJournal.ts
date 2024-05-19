@@ -117,7 +117,8 @@ class TahvelJournal {
 
             // Create a skeleton for the table
             const lessonDiscrepanciesTable = AssistentDom.createStructure(`
-                <table id="assistent-table">
+                <table id="assistent-discrepancies-table" class="assistent-table">
+                    <caption>Ebakõlad võrreldes tunniplaaniga</caption>
                     <thead>
                     <tr>
                         <th rowspan="2">Kuupäev</th>
@@ -180,143 +181,70 @@ class TahvelJournal {
         journalHeaderElement.dataset.lessonDiscrepanciesTableIsInjected = 'true';
     }
 
+
     static async addMissingGradesTable() {
-        // Find the journal header element
         const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
+        if (!journalHeaderElement || journalHeaderElement.getAttribute('data-lesson-discrepancies-table-is-injected') === 'true') return;
 
-        // Check if the journal header element is found
-        if (!journalHeaderElement) {
-            console.error('Journal header element not found');
-            return;
-        }
-
-        // Check if alerts have already been injected
-        if (journalHeaderElement.getAttribute('data-lesson-discrepancies-table-is-injected') === 'true') {
-            return;
-        }
-
-        // Get the journal with validation
         const journal = await TahvelJournal.getJournalWithValidation();
-        if (!journal) return;
+        if (!journal || journal.missingGrades.length === 0 || journal.contactLessonsPlanned > journal.entriesInTimetable.length) return;
 
-        // Get the missing grades from the journal
-        const missingGrades = journal.missingGrades
-
-        // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
-        if (missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
-
-            // Create a skeleton for the table
-            const missingGradesTable = AssistentDom.createStructure(`
-                <div id="alertMissingGrades">
-                    <table id="assistent-table">
-                        <thead>
-                        <tr>
-                            <th rowspan="2">Õpiväljund</th>
-                            <th>Hindeta õpilased</th>
-                            <th rowspan="2">Tegevus</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                </div>`);
-
-            // add before journalHeaderElement
-            journalHeaderElement.before(missingGradesTable);
-
-            // Return element which has aria-label equal to nameEt and span ng-click="editOutcome(journalEntry.curriculumModuleOutcomes)"
-            await AssistentDom.waitForElement('table.journalTable th');
-
-            for (const missingGrade of missingGrades) {
-                const alertElement = TahvelDom.createAlert();
-                alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
-                alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
-
-                // Convert each student object to a string
-                const studentListString = missingGrade.studentList.map(student => `${student.fullname}`).join(', ');
-
-                // Create a row for the table
-                const tr = AssistentDom.createStructure(`
+        const gradingType = journal.gradingType;
+        const isEristav = gradingType === "KUTSEHINDAMISVIIS_E";
+        const missingGradesTable = AssistentDom.createStructure(`
+        <div id="assistent-grades-table-container">
+            <table id="assistent-grades-table" class="assistent-table">
+                <caption>Puuduvad hinded</caption>
+                <thead>
                     <tr>
-                        <td class="align-left">${missingGrade.nameEt}</td>
-                        <td class="align-left">${studentListString}</td> <!-- Display the students as a string here -->
-                        <td></td>
-                    </tr>`);
+                        <th rowspan="2">Õpiväljund</th>
+                        <th>Hindeta õpilased</th>
+                        <th rowspan="2">Tegevus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${journal.missingGrades.map(({nameEt, studentList}) => `
+                        <tr>
+                            <td class="align-left">${nameEt}</td>
+                            <td class="align-left">${studentList.map(({fullname}) => fullname).join(', ')}</td>
+                            <td>
+                                <button class="md-raised md-button md-ink-ripple md-primary">${studentList.length > 1 ? 'Lisa hindeid' : 'Lisa hinne'}</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                    <tr>
+                        <td colspan="3" class="align-left">
+                            <input type="radio" id="mitteeristav" name="grading" value="Mitteeristav hindamine" ${!isEristav ? 'checked' : ''}>
+                            <label for="mitteeristav">Mitteeristav hindamine${!isEristav ? ' (vaikimisi)' : ''}</label>
+                            <br>
+                            <input type="radio" id="eristav" name="grading" value="Eristav hindamine" ${isEristav ? 'checked' : ''}>
+                            <label for="eristav">Eristav hindamine${isEristav ? ' (vaikimisi)' : ''}</label>
+                            <br>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `);
 
-                const gradeElement = await TahvelJournal.findJournalGradeElement(missingGrade.nameEt);
-                console.log('gradeElement:', gradeElement);
-                const button = TahvelDom.createActionButton('md-accent', 'Lisa',
-                    gradeElement, async () => {
-                        const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
-                        TahvelJournal.clickRadioButton();
-                        const formElement = document.querySelector('form[name="dialogForm"]');
-                        if (formElement) {
-                            formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
-                        }
-                        await TahvelJournal.setGrade(selectedRadioButtonId);
+        journalHeaderElement.before(missingGradesTable);
+        await AssistentDom.waitForElement('table.journalTable th');
 
-                        const style = TahvelDom.createBlinkStyle();
-                        document.head.append(style);
-                        const deleteButton = await AssistentDom.waitForElement('button[ng-click="saveOutcome()"]') as HTMLElement;
-                        if (deleteButton) {
-                            deleteButton.classList.add('blink');
-                        }
-                    });
+        document.querySelectorAll('#assistent-grades-table button.md-accent').forEach((button, index) => {
+            button.addEventListener('click', async () => {
+                const gradeElement = await TahvelJournal.findJournalGradeElement(journal.missingGrades[index].nameEt);
+                const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
+                TahvelJournal.clickRadioButton();
+                const formElement = document.querySelector('form[name="dialogForm"]');
+                if (formElement) formElement.setAttribute('data-selected-radio-button-id', selectedRadioButtonId);
+                await TahvelJournal.setGrade(selectedRadioButtonId);
 
-                tr.querySelector('td:last-child').appendChild(button);
-
-                missingGradesTable.querySelector('tbody').appendChild(tr);
-            }
-
-            // Get the gradingType from the journal
-            const gradingType = journal.gradingType;
-
-            // Create the first radio button
-            const radioButton1 = document.createElement('input');
-            radioButton1.type = 'radio';
-            radioButton1.name = 'grading';
-            radioButton1.value = 'Mitteeristav hindamine';
-            radioButton1.id = 'mitteeristav';
-            radioButton1.checked = gradingType !== "KUTSEHINDAMISVIIS_E"; // Set as default if gradingType is not "KUTSEHINDAMISVIIS_E"
-
-            // Create a label for the first radio button
-            const label1 = document.createElement('label');
-            label1.htmlFor = 'mitteeristav';
-            label1.textContent = 'Mitteeristav hindamine';
-
-            // Create the second radio button
-            const radioButton2 = document.createElement('input');
-            radioButton2.type = 'radio';
-            radioButton2.name = 'grading';
-            radioButton2.value = 'Eristav hindamine';
-            radioButton2.id = 'eristav';
-            radioButton2.checked = gradingType === "KUTSEHINDAMISVIIS_E"; // Set as default if gradingType is "KUTSEHINDAMISVIIS_E"
-
-            // Create a label for the second radio button
-            const label2 = document.createElement('label');
-            label2.htmlFor = 'eristav';
-            label2.textContent = 'Eristav hindamine';
-
-            // Create a row for the table
-            const tr1 = AssistentDom.createStructure(`
-                    <tr id="alertElementContainer">
-                        <td colspan="3" class="align-left"></td>
-                    </tr>`);
-
-            // Append the alertElement1 to the td with id "alertElementContainer"
-            const tdElement = tr1.querySelector('#alertElementContainer td:first-child');
-
-            // Append the radio buttons and labels to the td element
-            tdElement.appendChild(radioButton1);
-            tdElement.appendChild(label1);
-            tdElement.appendChild(document.createElement('br')); // Add a line break
-            tdElement.appendChild(radioButton2);
-            tdElement.appendChild(label2);
-            tdElement.appendChild(document.createElement('br')); // Add a line break
-
-            // Append the row to the table body
-            missingGradesTable.querySelector('tbody').appendChild(tr1);
-        }
+                const style = TahvelDom.createBlinkStyle();
+                document.head.append(style);
+                const deleteButton = await AssistentDom.waitForElement('button[ng-click="saveOutcome()"]') as HTMLElement;
+                if (deleteButton) deleteButton.classList.add('blink');
+            });
+        });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

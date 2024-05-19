@@ -188,7 +188,7 @@ class Tahvel {
         // Inject custom styles for the extension
         document.head.appendChild(AssistentDom.createStructure(`
             <style>
-                #assistent-table {
+                .assistent-table {
                     border-collapse: collapse;
                     font-family: Roboto, "Helvetica Neue", sans-serif;
                     font-size: 12px;
@@ -197,36 +197,43 @@ class Tahvel {
                     color: rgb(32 32 32);
                 }
                 
-                #assistent-table th,
-                #assistent-table td {
+                .assistent-table caption {
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    text-align: left;
+                }
+                
+                .assistent-table th,
+                .assistent-table td {
                     border: 1px solid #ccc;
                     padding: 10px;
                 }
                 
-                #assistent-table th, #assistent-table td:first-child, #alertElementContainer tr:last-child  {
+                .assistent-table th, .assistent-table td:first-child, #alertElementContainer tr:last-child  {
                     background-color: #FAFAFA;
                 }
                 
-                #assistent-table tr:nth-child(even) {
+                .assistent-table tr:nth-child(even) {
                     background-color: #F5F5F5;
                 }
                 
-                #assistent-table tr:nth-child(odd) {
+                .assistent-table tr:nth-child(odd) {
                     background-color: #FCFCFC;
                 }
                 
-                #assistent-table tr td:first-child {
+                .assistent-table tr td:first-child {
                     max-width: 300px;
                 }
                 
-                #assistent-table del {
+                .assistent-table del {
                     background-color: #fcc;
                     padding: 0;
                     color: #910000;
                     margin-right:3px;
                 }
                 
-                #assistent-table ins {
+                .assistent-table ins {
                     background-color: #cfc;
                     text-decoration: none;
                     padding: 0;
@@ -237,7 +244,7 @@ class Tahvel {
                     text-align: left;
                 }
                 
-                #alertMissingGrades {
+                #assistent-grades-table-container {
                     margin-top: 20px; 
                     margin-left: 18px;
                 }
