@@ -292,8 +292,12 @@ class TahvelDom {
 
 
     static createActionButton(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
-        return TahvelDom.createButton(color, text, async () => {
+        console.log('createActionButton executed');
+        console.log('createActionButton elementOrSelector', elementOrSelector);
 
+        return TahvelDom.createButton(color, text, async () => {
+            console.log('createActionButton click event');
+            console.log('createActionButton elementOrSelector', elementOrSelector);
             const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
 
             if (element) {
@@ -301,6 +305,7 @@ class TahvelDom {
                 if (clickCallback) clickCallback();
             } else {
                 console.error(elementOrSelector);
+
                 console.error('...element not found');
             }
         })

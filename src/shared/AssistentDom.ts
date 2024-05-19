@@ -28,31 +28,21 @@ class AssistentDom {
         return element;
     }
 
-    static waitForElement(selector: string): Promise<Element | null> {
+    static waitForElement(selector: string, timeout = 3000): Promise<Element | null> {
         return new Promise((resolve, reject) => {
-            const element = document.querySelector(selector);
-            if (element) {
-                resolve(element);
-                return;
-            }
-
-            console.log(`Element ${selector} not found, observing...`);
-            const observer = new MutationObserver((mutations, observer) => {
+            const interval = setInterval(() => {
+                console.log('Checking for element ' + selector + '...');
                 const element = document.querySelector(selector);
-                console.log('Observing element:', element);
                 if (element) {
+                    clearInterval(interval);
                     resolve(element);
-                    observer.disconnect();
                 }
-            });
+            }, 5); // Check every 100ms
 
-            observer.observe(document, {childList: true, subtree: true});
-
-            // Optional: Set a timeout to stop observing after a certain period
             setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`Element ${selector} not found within 3 sec time limit`));
-            }, 3000); // 3 seconds
+                clearInterval(interval);
+                reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+            }, timeout);
         });
     }
 

@@ -64,7 +64,23 @@ class TahvelJournal {
         const date = `${day}.${month}`;
 
         // Select all <th> elements within the journal table
+
+        // Artificial delay to wait for the table to load
+        //await new Promise(resolve => setTimeout(resolve, 1000));
+
+
+        const thElementsWaited = await AssistentDom.waitForElement('table.journalTable th');
+        console.log('Current time: ${timestampInMicroseconds.toFixed(0)}μs findJournalEntryElement thElementsWaited:', thElementsWaited);
+        if (!thElementsWaited) {
+            console.error('thElementsWaited NOT FOUND!');
+            return;
+        }
         const thElements = document.querySelectorAll('table.journalTable th');
+        console.log('findJournalEntryElement thElements:', thElements);
+        if (!thElements) {
+            console.error('thElements NOT FOUND!');
+            return;
+        }
 
         // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
         const filteredElements = Array.from(thElements).filter(th => {
@@ -141,7 +157,14 @@ class TahvelJournal {
             journalHeaderElement.appendChild(lessonDiscrepanciesTable);
 
             // Wait for the first <th> element to be visible
-            await AssistentDom.waitForElement('table.journalTable th');
+            const tableJournalTable = await AssistentDom.waitForElement('table.journalTable th');
+            if (!tableJournalTable) {
+                console.error('tableJournalTable NOT FOUND!');
+
+                return;
+            }
+
+            console.log('addLessonDiscrepanciesTable tableJournalTable:', tableJournalTable);
 
             // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
@@ -242,8 +265,10 @@ class TahvelJournal {
                         <td></td>
                     </tr>`);
 
+                const gradeElement = await TahvelJournal.findJournalGradeElement(missingGrade.nameEt);
+                console.log('gradeElement:', gradeElement);
                 const button = TahvelDom.createActionButton('md-accent', 'Lisa',
-                    await TahvelJournal.findJournalGradeElement(missingGrade.nameEt), async () => {
+                    gradeElement, async () => {
                         const selectedRadioButtonId = document.querySelector('input[name="grading"]:checked').id;
                         TahvelJournal.clickRadioButton();
                         const formElement = document.querySelector('form[name="dialogForm"]');
@@ -520,10 +545,16 @@ class TahvelJournal {
         const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
         const isLessonsInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
 
+        const journalEntryElement = await TahvelJournal.findJournalEntryElement(discrepancy);
+        if (!journalEntryElement) {
+            console.error('journalEntryElement NOT FOUND!');
+            return;
+        }
+        console.log('createActionButtonForLessonDiscrepancyAction journalEntryElement:', journalEntryElement);
         const action = {
             color: "",
             text: "",
-            elementOrSelector: await TahvelJournal.findJournalEntryElement(discrepancy),
+            elementOrSelector: journalEntryElement,
             callback: async () => {
             },
         };
