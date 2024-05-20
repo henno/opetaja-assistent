@@ -1,16 +1,16 @@
 import Api from "~src/shared/AssistentApiClient";
 import {
-    type AssistentLearningOutcomes,
+    type AssistentJournal,
     type AssistentJournalDifference,
     type AssistentJournalEntry,
+    type AssistentLearningOutcomes,
     LessonType
 } from "~src/shared/AssistentTypes";
 import {DateTime} from 'luxon';
-import type {apiJournalEntry} from "./TahvelTypes";
+import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
-import type {apiCurriculumModuleEntry, apiGradeEntry} from "./TahvelTypes";
 
 class TahvelJournal {
     static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
@@ -33,214 +33,174 @@ class TahvelJournal {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async findJournalEntryElement(discrepancy: any): Promise<HTMLElement | null> {
+
+        // Extract and format the discrepancy date as 'dd.mm'
         const discrepancyDate = new Date(discrepancy.date);
         const day = discrepancyDate.getUTCDate().toString().padStart(2, '0');
-        const month = (discrepancyDate.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-based in JS
-        const date = `${day}.${month}`;
+        const month = (discrepancyDate.getUTCMonth() + 1).toString().padStart(2, '0');
+        const formattedDate = `${day}.${month}`;
 
-        // Wait for the first <th> element to be visible
-        await AssistentDom.waitForElementToBeVisible('table.journalTable th');
-
-        // Select all <th> elements within the journal table
-        const thElements = document.querySelectorAll('table.journalTable th');
-
-        // Filter the <th> elements to only include those that contain the selected date and do not contain the text "Iseseisev töö"
-        const filteredElements = Array.from(thElements).filter(th => {
-            const divElement = th.querySelector('div');
-            if (!divElement) return false; // If there's no <div>, skip this <th>
-
-            const ariaLabel = divElement.getAttribute('aria-label');
-            return th.textContent.includes(`${date}`) && !ariaLabel.includes("Iseseisev töö");
+        // Find the table header containing the formatted date and no 'Iseseisev töö' div
+        const th = Array.from(document.querySelectorAll('table.journalTable th')).find(th => {
+            const hasTheDate = Array.from(th.querySelectorAll('span')).some(span => span.textContent.includes(formattedDate));
+            const isNotIndependentWork = !th.querySelector('div[aria-label*="Iseseisev töö"]');
+            return hasTheDate && isNotIndependentWork;
         });
 
-        // If no elements found, return null
-        if (filteredElements.length === 0) {
-            return null;
-        }
-
-        // Select the desired span element within the first found <th> element
-        const spanElement = filteredElements[0].querySelector('span[ng-if="journalEntry.entryType.code !== \'SISSEKANNE_L\'"]') as HTMLElement;
-        if (!spanElement) {
-            return null;
-        }
-
-        // Return the selected span element
-        return spanElement;
+        // Extract and return the target span element if found, otherwise return null
+        const targetSpan = th?.querySelector('span[ng-if="journalEntry.entryType.code !== \'SISSEKANNE_L\'"]') as HTMLElement;
+        return targetSpan || null;
     }
 
-    static async injectAlerts() {
-        const journalHeaderElement = document.querySelector('.ois-form-layout-padding');
-
-        if (!journalHeaderElement) {
-            console.error('Journal header element not found');
-            return;
-        }
-
-        // Check if alerts have already been injected
-        if (journalHeaderElement.getAttribute('data-alerts-injected') === 'true') {
-            return;
-        }
-
+    static async getJournalWithValidation(): Promise<AssistentJournal | null> {
         const journalId = parseInt(window.location.href.split('/')[5]);
+
         if (!journalId) {
             console.error('Journal ID ' + journalId + ' not found in URL');
-            return;
+            return null;
         }
         const journal = AssistentCache.getJournal(journalId)
         if (!journal) {
             console.error('Journal ' + journalId + ' not found in cache');
+            return null;
+        }
+
+        return journal;
+    }
+
+    static async addLessonDiscrepanciesTable() {
+        const journalHeaderElement = document.querySelector('.ois-form-layout-padding') as HTMLElement;
+
+        if (!journalHeaderElement) {
+            console.error('Journal header element not found to inject lesson discrepancies table');
             return;
         }
-        const discrepancies = journal.differencesToTimetable
 
-        if (discrepancies.length) {
+        const journal = await TahvelJournal.getJournalWithValidation();
+        if (!journal) {
+            return;
+        }
 
-            const sortedDiscrepancies = discrepancies.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        if (journal.differencesToTimetable.length) {
 
-            // Create a container for the alerts
-            const alertsContainer = TahvelDom.createAlertContainer('alertDiscrepancies', '0px');
+            const sortedDiscrepancies = journal.differencesToTimetable.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-            const headerRow = TahvelDom.createAlertListHeader();
-            headerRow.appendChild(TahvelDom.createDateHeader());
-            headerRow.appendChild(TahvelDom.createMessageHeader());
-            headerRow.appendChild(TahvelDom.createActionHeader());
+            // Create a skeleton for the table
+            const lessonDiscrepanciesTable = AssistentDom.createStructure(`
+                <table id="assistent-discrepancies-table" class="assistent-table">
+                    <caption>Ebakõlad võrreldes tunniplaaniga</caption>
+                    <thead>
+                    <tr>
+                        <th rowspan="2">Kuupäev</th>
+                        <th>Algustund</th>
+                        <th>Tundide arv</th>
+                        <th rowspan="2">Tegevus</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>`);
 
-            alertsContainer.appendChild(headerRow);
-            journalHeaderElement.appendChild(alertsContainer);
+            journalHeaderElement.appendChild(lessonDiscrepanciesTable);
 
-
-            // If there are no journal entries for the date, but there are timetable entries, add a button to add a new journal entry
-            function createActionButtonForAlert(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
-                const actionElement = TahvelDom.createActionElement();
-                actionElement.appendChild(TahvelDom.createButton(color, text, async () => {
-                    const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
-                    if (element) {
-
-                        element.click();
-                        if (clickCallback) {
-                            clickCallback();
-                        }
-                    }
-                }));
-                return actionElement;
+            // Wait for the first <td> element to be visible
+            try {
+                await AssistentDom.waitForElement('table.journalTable tbody tr td');
+            } catch (e) {
+                console.error('tableJournalTable NOT FOUND!' + e.message);
+                return;
             }
 
-            // Iterate over the discrepancies and create an alert with the appropriate action button
+            // Iterate over the discrepancies and create a row with the appropriate action button
             for (const discrepancy of sortedDiscrepancies) {
-                const alertElement = TahvelDom.createAlert();
+                const dateText = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
 
-
-                // Add the date of the discrepancy
-                alertElement.appendChild(TahvelDom.createAlertDate(DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy')));
-
-                // Create a message for the discrepancy
-                const journalMessage = TahvelJournal.createMessage(discrepancy, 'journal');
-                alertElement.appendChild(TahvelDom.createMessageElement(`<table><tr><td>Tunniplaanis:</td><td>${(TahvelJournal.createMessage(discrepancy, 'timetable'))}</td></tr><tr><td>Päevikus:</td><td>${journalMessage}</td></tr></table>`));
-
-                // Add an action button based on the discrepancy type
-                if (discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0) {
-                    // Add a button to ADD a new journal entry if there are no journal entries for the date, but there are timetable entries
-                    alertElement.appendChild(createActionButtonForAlert('md-primary', 'Lisa', '[ng-click="addNewEntry()"]', async () => {
-                        await TahvelJournal.setJournalEntryTypeAsLesson()
-                        await TahvelJournal.setJournalEntryTypeAsContactLesson() // can be async
-                        await TahvelJournal.setJournalEntryDate(discrepancy) // can be async
-                        await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy)
-                    }));
-
-                } else if (discrepancy.timetableLessonCount > 0
-                    && discrepancy.journalLessonCount > 0
-                    && (discrepancy.timetableLessonCount !== discrepancy.journalLessonCount || discrepancy.timetableFirstLessonStartNumber !== discrepancy.journalFirstLessonStartNumber)
-                ) {
-
-                    // Add a button to EDIT the journal entry if the number of lessons or the start lesson number is different
-                    alertElement.appendChild(createActionButtonForAlert('md-accent', 'Muuda', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
-                        await TahvelJournal.setJournalEntryStartLessonNrAndCountOfLessons(discrepancy);
-                    }));
-
-                } else if (discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0) {
-
-                    // Add a button to delete the journal entry if there are no timetable entries for the date, but there are journal entries
-                    alertElement.appendChild(createActionButtonForAlert('md-warn', 'Vaata', await TahvelJournal.findJournalEntryElement(discrepancy), async () => {
-                        // Create a style element
-                        const style = TahvelDom.createBlinkStyle();
-                        // Append the style element to the document head
-                        document.head.append(style);
-                        // Find the save button and add a red border to it
-                        const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
-                        if (deleteButton) {
-                            deleteButton.classList.add('blink');
-                        }
-                    }));
+                let startLessonText: string | number;
+                if (discrepancy.journalFirstLessonStartNumber === 0 || discrepancy.journalFirstLessonStartNumber === discrepancy.timetableFirstLessonStartNumber) {
+                    startLessonText = discrepancy.timetableFirstLessonStartNumber;
+                } else {
+                    startLessonText = `<del>${discrepancy.journalFirstLessonStartNumber}</del><ins>${discrepancy.timetableFirstLessonStartNumber}</ins>`;
                 }
-                alertsContainer.appendChild(alertElement);
+
+                let lessonCountText: string | number;
+                if (discrepancy.journalLessonCount === 0 || discrepancy.journalLessonCount === discrepancy.timetableLessonCount) {
+                    lessonCountText = discrepancy.timetableLessonCount;
+                } else {
+                    lessonCountText = `<del>${discrepancy.journalLessonCount}</del><ins>${discrepancy.timetableLessonCount}</ins>`;
+                }
+
+                const button = await TahvelJournal.createActionButtonForLessonDiscrepancyAction(discrepancy);
+
+                // Create a row for the table
+                const tr = AssistentDom.createStructure(`
+                    <tr>
+                        <td>${dateText}</td>
+                        <td>${startLessonText}</td>
+                        <td>${lessonCountText}</td>
+                        <td></td>
+                    </tr>`);
+
+                // Append the button to the last cell in the row
+                tr.querySelector('td:last-child').appendChild(button);
+
+                // Append the row to the table body
+                lessonDiscrepanciesTable.querySelector('tbody').appendChild(tr);
             }
-            journalHeaderElement.appendChild(alertsContainer);
         }
-        // Mark that alerts have been injected
-        journalHeaderElement.setAttribute('data-alerts-injected', 'true');
+        // Mark that lesson discrepancies table has been injected
+        journalHeaderElement.dataset.lessonDiscrepanciesTableIsInjected = 'true';
     }
 
-    static async injectMissingGradesAlerts() {
+    static async addMissingGradesTable() {
         const journalHeaderElement = document.querySelector('div[ng-if="journal.hasJournalStudents"]');
+        if (!journalHeaderElement || journalHeaderElement.getAttribute('data-lesson-discrepancies-table-is-injected') === 'true') return;
 
-        if (!journalHeaderElement) {
-            console.error('Journal header element not found');
-            return;
-        }
+        const journal = await TahvelJournal.getJournalWithValidation();
+        if (!journal || journal.missingGrades.length === 0 || journal.contactLessonsPlanned > journal.entriesInTimetable.length) return;
 
-        // Check if alerts have already been injected
-        if (journalHeaderElement.getAttribute('data-alerts-injected') === 'true') {
-            return;
-        }
+        const missingGradesTable = AssistentDom.createStructure(`
+            <div id="assistent-grades-table-container">
+                <table id="assistent-grades-table" class="assistent-table">
+                    <caption>Puuduvad hinded</caption>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Õpiväljund</th>
+                            <th>Hindeta õpilased</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${journal.missingGrades.map(({nameEt, studentList}) => `
+                            <tr>
+                                <td class="align-left">${nameEt}</td>
+                                <td class="align-left">${studentList.map(({fullname}) => fullname).join(', ')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`);
 
-        const journalId = parseInt(window.location.href.split('/')[5]);
-        if (!journalId) {
-            console.error('Journal ID ' + journalId + ' not found in URL');
-            return;
-        }
-        const journal = AssistentCache.getJournal(journalId)
-        if (!journal) {
-            console.error('Journal ' + journalId + ' not found in cache');
-            return;
-        }
-        const missingGrades = journal.missingGrades
-        // compare entriesInTimetableLength with contactLessonsPlanned and  if contactLessonsPlanned <= entriesInTimetableLength then inject alert after journalHeaderElement containing missing grades
-        if (missingGrades.length > 0 && journal.contactLessonsPlanned <= journal.entriesInTimetable.length) {
-            const alertsContainer = TahvelDom.createAlertContainer('alertMissingGrades', '20px');
-            const headerRow = TahvelDom.createAlertListHeader();
-            headerRow.appendChild(TahvelDom.createGradesHeader());
-            headerRow.appendChild(TahvelDom.createStudentsWithoutGradesListHeader());
-            alertsContainer.appendChild(headerRow);
-            journalHeaderElement.appendChild(alertsContainer);
-            for (const missingGrade of missingGrades) {
-                const alertElement = TahvelDom.createAlert();
-                alertElement.appendChild(TahvelDom.createGroupGrades(`${missingGrade.nameEt}`));
-                alertElement.appendChild(TahvelDom.createGradesAlertMessage(missingGrade.studentList));
-                alertsContainer.appendChild(alertElement);
-            }
-            journalHeaderElement.before(alertsContainer);
-        }
+        journalHeaderElement.before(missingGradesTable);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    static createMessage(discrepancy: any, type: string): string {
-        let message;
-        if (discrepancy[`${type}LessonCount`] === 0) {
-            message = `${discrepancy[`${type}LessonCount`]}h`;
-        } else if (discrepancy[`${type}LessonCount`] === 1) {
-            message = `${discrepancy[`${type}LessonCount`]}h (${discrepancy[`${type}FirstLessonStartNumber`]} tund)`;
-        } else {
-            const endLessonNumber = discrepancy[`${type}FirstLessonStartNumber`] + discrepancy[`${type}LessonCount`] - 1;
-            message = `${discrepancy[`${type}LessonCount`]}h (${discrepancy[`${type}FirstLessonStartNumber`]}-${endLessonNumber} tund)`;
-        }
-        return message;
-    }
+    static async setJournalEntryStartLessonNr(discrepancy: AssistentJournalDifference): Promise<void> {
 
-    static async setJournalEntryStartLessonNrAndCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
-
-        // Select the start lesson number from the dropdownx
+        // Select the start lesson number from the dropdown
         await TahvelDom.selectDropdownOption("journalEntry.startLessonNr", discrepancy.timetableFirstLessonStartNumber.toString());
 
+        // Create a style element
+        const style = TahvelDom.createBlinkStyle();
+
+        // Append the style element to the document head
+        document.head.append(style);
+
+        // Find the save button and add a red border to it
+        const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
+        if (saveButton) {
+            saveButton.classList.add('blink');
+        }
+    }
+
+    static async setJournalEntryCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
         const timetableLessons = discrepancy.timetableLessonCount;
 
         // Fill the number of lessons
@@ -248,14 +208,15 @@ class TahvelJournal {
 
         // Create a style element
         const style = TahvelDom.createBlinkStyle();
+
         // Append the style element to the document head
         document.head.append(style);
+
         // Find the save button and add a red border to it
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
         }
-
     }
 
     // Function to preselect the journal entry capacity types
@@ -337,6 +298,76 @@ class TahvelJournal {
                     studentId: result.studentId,
                 }))
             }));
+    }
+
+    private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {
+        const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
+        const isLessonsInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
+
+        let journalEntryElement: HTMLElement;
+
+        try {
+            journalEntryElement = await TahvelJournal.findJournalEntryElement(discrepancy);
+        } catch (e) {
+            console.error('Journal entry element not found: ' + e.message);
+            return;
+        }
+
+        const action = {
+            color: "",
+            text: "",
+            elementOrSelector: journalEntryElement,
+            callback: async () => {
+            },
+        };
+
+        if (isLessonsInDiaryButNotInTimetable) {
+            action.color = "md-warn";
+            action.text = "Vaata sissekannet";
+            action.callback = async () => {
+                const style = TahvelDom.createBlinkStyle();
+                document.head.append(style);
+                const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
+                if (deleteButton) {
+                    deleteButton.classList.add('blink');
+                }
+            };
+        } else if (isLessonsInTimetableButNotInDiary) {
+            action.color = "md-primary";
+            action.text = "Lisa sissekanne";
+            action.elementOrSelector = await AssistentDom.waitForElement('button[ng-click="addNewEntry()"]') as HTMLElement;
+
+            if (!action.elementOrSelector) {
+                // debugger;
+                console.error("Add button not found");
+                return;
+            }
+            action.callback = async () => {
+                await TahvelJournal.setJournalEntryTypeAsLesson();
+                await TahvelJournal.setJournalEntryDate(discrepancy);
+                await TahvelJournal.setJournalEntryTypeAsContactLesson();
+                await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
+                await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+            };
+        } else {
+            action.color = "md-accent";
+            action.text = "Muuda sissekannet";
+            action.callback = async () => {
+                if (discrepancy.journalFirstLessonStartNumber !== discrepancy.timetableFirstLessonStartNumber) {
+                    await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
+                }
+                if (discrepancy.journalLessonCount !== discrepancy.timetableLessonCount) {
+                    await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+                }
+            };
+        }
+
+        return TahvelDom.createActionButton(
+            action.color,
+            action.text,
+            action.elementOrSelector,
+            action.callback
+        );
     }
 }
 

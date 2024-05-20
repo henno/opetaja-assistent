@@ -1,5 +1,4 @@
 import AssistentDom from "~src/shared/AssistentDom";
-import type {student} from "~src/shared/AssistentTypes";
 
 class TahvelDom {
     static createExclamationMark(id: string, color: string, innerHTML: string, title: string): HTMLSpanElement {
@@ -18,108 +17,6 @@ class TahvelDom {
     static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
         className = 'md-raised md-button md-ink-ripple ' + className;
         return AssistentDom.createButton(className, textContent, clickHandler);
-    }
-
-    static createAlertContainer(alertClassName, marginleft) {
-        return AssistentDom.createElement('article', {
-            className: alertClassName,
-            style: {
-                display: 'table',
-                border: '1px solid #ccc',
-                backgroundColor: '#f9f9f9',
-                padding: '20px',
-                paddingRight: '30px',
-                margin: '10px',
-                marginLeft: marginleft,
-            }
-        });
-    }
-
-    static createAlertListHeader() {
-        return AssistentDom.createElement('section', {
-            style: {
-                display: 'table-row',
-                margin: '20px',
-                marginRight: '30px',
-                fontWeight: 'bold'
-            }
-        });
-    }
-
-    static createAlert() {
-        return AssistentDom.createElement('section', {
-            style: {
-                display: 'table-row',
-                margin: '20px',
-                marginRight: '30px'
-            },
-            role: 'alert'
-            // alertElement.setAttribute('role', 'alert');
-        });
-    }
-
-    static createDateHeader() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            }
-        }, 'Kuupäev');
-    }
-
-    static createAlertDate(date: string) {
-        return AssistentDom.createElement('time', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            },
-            className: 'alert-date'
-        }, date);
-    }
-
-    static createMessageHeader() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            }
-        }, 'Probleemid');
-    }
-
-    static createMessageElement(message: string) {
-        const element = AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            },
-            className: 'alert-message'
-        });
-        element.innerHTML = message;
-        return element;
-    }
-
-    static createActionHeader() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            }
-        }, 'Tegevus');
-    }
-
-    static createActionElement() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            }
-        });
     }
 
     static createBlinkStyle() {
@@ -210,48 +107,23 @@ class TahvelDom {
 
     }
 
-    static createGradesHeader() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
+    static createActionButton(color, text, elementOrSelector: string | HTMLElement, clickCallback) {
+
+        return TahvelDom.createButton(color, text, async () => {
+
+            const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
+
+            if (element) {
+                element.click();
+                if (clickCallback) clickCallback();
+            } else {
+                console.error(elementOrSelector);
+                console.error('...element not found');
             }
-        }, 'Õpiväljundid');
+        })
+
     }
 
-    static createGroupGrades(name_et: string) {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left',
-                maxWidth: '30%'
-            }
-        }, name_et);
-    }
-
-    static createStudentsWithoutGradesListHeader() {
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left'
-            }
-        }, 'Hindeta õpilased');
-    }
-
-    static createGradesAlertMessage(studentList: student[]) {
-        const message = studentList.map(student => student.fullname).join(', ');
-        return AssistentDom.createElement('div', {
-            style: {
-                display: 'table-cell',
-                padding: '2px',
-                textAlign: 'left',
-                maxWidth: '30%'
-            }
-        }, message);
-    }
 }
 
 

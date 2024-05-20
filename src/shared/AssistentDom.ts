@@ -28,29 +28,45 @@ class AssistentDom {
         return element;
     }
 
-    static waitForElement(selector: string): Promise<Element | null> {
+    static async waitForElement(selector, timeout = 2000): Promise<HTMLElement> {
+
         return new Promise((resolve, reject) => {
+
+            // Initial check for the element
             const element = document.querySelector(selector);
             if (element) {
                 resolve(element);
                 return;
             }
 
-            const observer = new MutationObserver((mutations, observer) => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    resolve(element);
-                    observer.disconnect();
+            let resolved = false;
+
+            // Poll for the element every 100ms (can't use MutationObserver because it doesn't detect all changes)
+            const intervalId = setInterval(() => {
+                const targetElement = document.querySelector(selector);
+                if (targetElement) {
+                    if (!resolved) {
+                        resolved = true;
+                        clearInterval(intervalId);
+                        resolve(targetElement);
+                    }
                 }
-            });
+            }, 100);
 
-            observer.observe(document, {childList: true, subtree: true});
-
-            // Optional: Set a timeout to stop observing after a certain period
+            // Stop polling after the timeout
             setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`Element ${selector} not found within 3 sec time limit`));
-            }, 3000); // 3 seconds
+                if (!resolved) {
+                    resolved = true;
+                    clearInterval(intervalId);
+
+                    const targetElement = document.querySelector(selector);
+                    if (targetElement) {
+                        resolve(targetElement);
+                    } else {
+                        reject(new Error(`Element ${selector} not found within ${timeout / 1000} sec time limit`));
+                    }
+                }
+            }, timeout);
         });
     }
 
@@ -120,6 +136,37 @@ class AssistentDom {
                 reject(new Error(`${attribute} attribute not found within ${timeout} milliseconds`));
             }, timeout);
         });
+    }
+
+    static createStructure(html: string): HTMLElement | null {
+        // Check if the HTML string starts with a 'tr' tag
+        const startsWithTr = html.trim().startsWith('<tr');
+
+        // If the HTML string starts with a 'tr' tag, wrap it in table tags
+        if (startsWithTr) {
+            html = `<table>${html}</table>`;
+        }
+
+        // Create a temporary div element
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html.trim();
+
+        // Check if the HTML string is valid and contains only one root element
+        if (tempDiv.childNodes.length !== 1) {
+            console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
+            return null;
+        }
+
+        // Get the root element
+        let rootElement = tempDiv.firstChild as HTMLElement;
+
+        // If the HTML string started with a 'tr' tag, the root element will be a table
+        // In this case, get the first 'tr' element from the table
+        if (startsWithTr && rootElement.tagName.toLowerCase() === 'table') {
+            rootElement = rootElement.querySelector('tr') as HTMLElement;
+        }
+
+        return rootElement;
     }
 }
 

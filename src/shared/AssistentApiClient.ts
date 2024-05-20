@@ -14,10 +14,6 @@ class AssistentApiClient {
         return AssistentApiClient.request('GET', endpoint);
     }
 
-    static async post(endpoint: string, body: object) {
-        return AssistentApiClient.request('POST', endpoint, body);
-    }
-
     static async request(method: string, endpoint: string, body: object | null = null) {
         const options = {
             method: method,

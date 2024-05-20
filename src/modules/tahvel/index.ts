@@ -10,10 +10,10 @@ import AssistentDom from "~src/shared/AssistentDom";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
 import {type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
 
-const urlJournalsList = '/#/journals(\\?_menu)?';
-const urlJournalEdit = '#/journal/\\d+/edit';
-const elementJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
-const elementJournalEdit = `#journalEntriesByDate`;
+const urlForJournalsList = '/#/journals(\\?_menu)?';
+const urlForJournalEdit = '#/journal/\\d+/edit';
+const linksInJournalList = `#main-content > div.layout-padding > div > md-table-container > table > tbody > tr > td:nth-child(2) > a`;
+const elementInJournalEdit = `#journalEntriesByDate > table > thead > tr > th:nth-child(1)`;
 
 class Tahvel {
 
@@ -21,21 +21,21 @@ class Tahvel {
     static actions = [
         {
             description: 'Inject warning triangles to journal list when there are discrepancies or missing grades',
-            urlFragment: new RegExp(urlJournalsList),
-            elementToWaitFor: elementJournalList,
-            action: TahvelJournalList.injectAlerts
+            urlFragment: new RegExp(urlForJournalsList),
+            elementToWaitFor: linksInJournalList,
+            action: TahvelJournalList.addWarningTriangles
         },
         {
-            description: 'Inject alerts to journal pages when there are discrepancies between timetable and journal',
-            urlFragment: new RegExp(urlJournalEdit),
-            elementToWaitFor: elementJournalEdit,
-            action: TahvelJournal.injectAlerts
+            description: 'Inject a table to journal pages when there are discrepancies between timetable and journal',
+            urlFragment: new RegExp(urlForJournalEdit),
+            elementToWaitFor: elementInJournalEdit,
+            action: TahvelJournal.addLessonDiscrepanciesTable
         },
         {
             description: 'Inject alerts to journal pages when there are missing grades',
-            urlFragment: new RegExp(urlJournalEdit),
-            elementToWaitFor: elementJournalEdit,
-            action: TahvelJournal.injectMissingGradesAlerts
+            urlFragment: new RegExp(urlForJournalEdit),
+            elementToWaitFor: elementInJournalEdit,
+            action: TahvelJournal.addMissingGradesTable
         }
     ];
 
@@ -43,6 +43,7 @@ class Tahvel {
     static async init(): Promise<void> {
 
         try {
+
             // Set the base URL for the API
             Api.url = Api.extractBaseUrl() + "hois_back";
 
@@ -54,8 +55,11 @@ class Tahvel {
             // Fill the cache with data
             await Tahvel.refreshCache();
 
+            // Inject custom styles
+            Tahvel.addCustomStyles();
+
             Tahvel.enhanceSPAHistoryNavigation();
-            // Check missing entries
+
         } catch (error) {
             console.error('Error in Tahvel.init:', error);
         }
@@ -82,7 +86,6 @@ class Tahvel {
             // Execute actions based on the initial URL
             Tahvel.executeActionsBasedOnURL();
 
-
         } catch (error) {
             console.error('Error in Tahvel.enhanceSPAHistoryNavigation:', error);
         }
@@ -90,24 +93,24 @@ class Tahvel {
 
     /** Injects the components to the DOM when the user navigates to a new location */
     private static async executeActionsBasedOnURL() {
-    try {
-        // Get the current URL
-        const currentUrl = window.location.href;
 
-        // Find all action configs based on the URL
-        const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
+        try {
+            // Get the current URL
+            const currentUrl = window.location.href;
 
-        for (const actionConfig of actionConfigs) {
-            // Wait for the target element to be visible
-            await AssistentDom.waitForElementToBeVisible(actionConfig.elementToWaitFor);
+            // Find all action configs based on the URL
+            const actionConfigs = Tahvel.actions.filter(config => config.urlFragment.test(currentUrl));
 
-            // Execute the action
-            actionConfig.action();
+            for (const actionConfig of actionConfigs) {
+                await AssistentDom.waitForElement(actionConfig.elementToWaitFor);
+
+                // Execute the action
+                actionConfig.action();
+            }
+        } catch (error) {
+            console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
         }
-    } catch (error) {
-        console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
     }
-}
 
     /** Fetches the timetable entries and fills the cache with them */
     private static async refreshCache() {
@@ -181,6 +184,73 @@ class Tahvel {
         }
     }
 
+    /** Injects additional styles for the extension to the DOM */
+    private static addCustomStyles() {
+        // Inject custom styles for the extension
+        document.head.appendChild(AssistentDom.createStructure(`
+            <style>
+                .assistent-table {
+                    border-collapse: collapse;
+                    font-family: Roboto, "Helvetica Neue", sans-serif;
+                    font-size: 12px;
+                    vertical-align: middle;
+                    text-align: center;
+                    color: rgb(32 32 32);
+                }
+                
+                .assistent-table caption {
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    text-align: left;
+                }
+                
+                .assistent-table th,
+                .assistent-table td {
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                }
+                
+                .assistent-table th, .assistent-table td:first-child, #alertElementContainer tr:last-child  {
+                    background-color: #FAFAFA;
+                }
+                
+                .assistent-table tr:nth-child(even) {
+                    background-color: #F5F5F5;
+                }
+                
+                .assistent-table tr:nth-child(odd) {
+                    background-color: #FCFCFC;
+                }
+                
+                .assistent-table tr td:first-child {
+                    max-width: 300px;
+                }
+                
+                .assistent-table del {
+                    background-color: #fcc;
+                    padding: 0;
+                    color: #910000;
+                    margin-right:3px;
+                }
+                
+                .assistent-table ins {
+                    background-color: #cfc;
+                    text-decoration: none;
+                    padding: 0;
+                    margin-left: 3px;
+                }
+                
+                td.align-left {
+                    text-align: left;
+                }
+                
+                #assistent-grades-table-container {
+                    margin-top: 20px; 
+                    margin-left: 18px;
+                }
+            </style>`));
+    }
 }
 
 export default Tahvel;
