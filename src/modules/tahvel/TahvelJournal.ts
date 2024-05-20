@@ -199,7 +199,6 @@ class TahvelJournal {
                         <tr>
                             <th rowspan="2">Õpiväljund</th>
                             <th>Hindeta õpilased</th>
-                            <th rowspan="2">Tegevus</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -207,53 +206,14 @@ class TahvelJournal {
                             <tr>
                                 <td class="align-left">${nameEt}</td>
                                 <td class="align-left">${studentList.map(({fullname}) => fullname).join(', ')}</td>
-                                <td>
-                                    <button class="md-raised md-button md-ink-ripple md-primary">${studentList.length > 1 ? 'Lisa hindeid' : 'Lisa hinne'}</button>
-                                </td>
                             </tr>
                         `).join('')}
-                        <tr>
-                            <td colspan="3" class="align-left">
-                                <input type="radio" id="mitteeristav" name="grading" value="Mitteeristav hindamine" ${!isEristav ? 'checked' : ''}>
-                                <label for="mitteeristav">Mitteeristav hindamine${!isEristav ? ' (vaikimisi)' : ''}</label>
-                                <br>
-                                <input type="radio" id="eristav" name="grading" value="Eristav hindamine" ${isEristav ? 'checked' : ''}>
-                                <label for="eristav">Eristav hindamine${isEristav ? ' (vaikimisi)' : ''}</label>
-                                <br>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>`);
 
         journalHeaderElement.before(missingGradesTable);
         await AssistentDom.waitForElement('table.journalTable th');
-
-        document.querySelectorAll('#assistent-grades-table button').forEach((button, index) => {
-            console.log('button', button);
-
-            button.addEventListener('click', async () => {
-                // Click on "Sisestusväljana" radio button to enable grade input as text
-
-                // Find the ↻ icon for the selected learning outcome grade and click it to open the grade input dialog
-
-                // Iterate over all outcomes
-
-                // Iterate over all students who are missing a grade of the current outcome
-
-                // Calculate the student's grade based on the grading type and existing grades
-
-                // Set the grade for the current student
-
-                // Set the date of the grade for the current student
-
-                // If the grade was negative input a comment for the grade explaining the reason for the negative grade
-
-
-                // Click on the green checkmark to save the grades for this outcome
-
-            });
-        });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -479,7 +439,7 @@ class TahvelJournal {
 
         if (isLessonsInDiaryButNotInTimetable) {
             action.color = "md-warn";
-            action.text = "Vaata";
+            action.text = "Vaata sissekannet";
             action.callback = async () => {
                 const style = TahvelDom.createBlinkStyle();
                 document.head.append(style);
@@ -490,7 +450,7 @@ class TahvelJournal {
             };
         } else if (isLessonsInTimetableButNotInDiary) {
             action.color = "md-primary";
-            action.text = "Lisa";
+            action.text = "Lisa sissekanne";
             action.elementOrSelector = await AssistentDom.waitForElement('button[ng-click="addNewEntry()"]') as HTMLElement;
 
             if (!action.elementOrSelector) {
