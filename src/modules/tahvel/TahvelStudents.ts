@@ -1,29 +1,32 @@
-
 import Api from "~src/shared/AssistentApiClient";
-import type { AssistentStudent } from "~src/shared/AssistentTypes";
-import type { apiStudentEntry } from "./TahvelTypes";
+import {type AssistentStudent, AssistentStudentStatus} from "~src/shared/AssistentTypes";
+import {type apiStudentEntry, apiStudentStatus} from "./TahvelTypes";
 
 class TahvelStudents {
+
+    private static statusMap: Record<string, AssistentStudentStatus> = {
+        [apiStudentStatus.active]: AssistentStudentStatus.active,
+        [apiStudentStatus.academicLeave]: AssistentStudentStatus.academicLeave,
+    };
+
     static async fetchEntries(journalId: number): Promise<AssistentStudent[]> {
         try {
             const response: apiStudentEntry[] = await Api.get(`/journals/${journalId}/journalStudents`);
-
-            // Transform the data to AssistentStudent type
-            return response.reduce((acc: AssistentStudent[], student: apiStudentEntry) => {
-                acc.push({
-                    studentId: student.studentId,
-                    fullname: student.fullname,
-                    status: student.status
-                });
-                return acc;
-            }, []);
-
-
-
+            return response.map(({studentId, fullname, status}) => ({
+                studentId,
+                name: fullname,
+                status: TahvelStudents.convertStudentStatusFromTahvelToAssistent(status),
+            }));
         } catch (error) {
             console.error("Error fetching student entries:", error);
-            throw error; // Rethrow error for upper layers to handle
+            throw error;
         }
+    }
+
+    private static convertStudentStatusFromTahvelToAssistent(value: string): AssistentStudentStatus {
+        const status = TahvelStudents.statusMap[value];
+        if (!status) throw new Error(`Invalid student status: ${value}`);
+        return status;
     }
 }
 

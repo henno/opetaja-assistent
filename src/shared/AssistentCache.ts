@@ -1,7 +1,7 @@
 import type {
     AssistentJournal,
     AssistentJournalDifference,
-    AssistentLessonTime, StudentsWithoutGrades
+    AssistentLessonTime, AssistentStudentsWithoutGrades
 } from "~src/shared/AssistentTypes";
 import {LessonType} from "~src/shared/AssistentTypes";
 
@@ -90,14 +90,14 @@ export class AssistentCache {
     // compare studentOutcomeResults and students for each curriculumModuleOutcome and for each journal
     static findCurriculumModuleOutcomeDiscrepancies(journalId: number): void {
         const journal = AssistentCache.getJournal(journalId);
-        const missingGrades: StudentsWithoutGrades[] = [];
+        const missingGrades: AssistentStudentsWithoutGrades[] = [];
 
         if (!journal) return;
 
         // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
         for (const curriculumModule of journal.learningOutcomes) {
-            const missingGradesForModule: StudentsWithoutGrades = {
-                nameEt: curriculumModule.nameEt,
+            const missingGradesForModule: AssistentStudentsWithoutGrades = {
+                name: curriculumModule.name,
                 studentList: []
             };
 
@@ -135,4 +135,4 @@ export class AssistentCache {
 }
 
 export default AssistentCache;
-//console.log('AssistentCache', AssistentCache.journals);
+console.log('AssistentCache', AssistentCache.journals);

@@ -25,9 +25,13 @@ export interface TahvelStudyYear {
 export interface apiStudentEntry {
     studentId: number;
     fullname: string;
-    status: string;
+    status: apiStudentStatus;
 }
 
+export enum apiStudentStatus {
+    active = 'OPPURSTAATUS_O',
+    academicLeave = 'OPPURSTAATUS_A'
+}
 export interface apiCurriculumModuleEntry {
     journalId: number;
     nameEt: string;
@@ -43,10 +47,15 @@ export interface apiGradeEntry {
 export interface apiJournalInfoEntry {
     id: number;
     lessonHours: apiLessonHours;
-    assessment: string;
+    assessment: apiAssessmentEntry;
 }
 
-export interface apiLessonHours{
+export enum apiAssessmentEntry {
+    numeric = 'KUTSEHINDAMISVIIS_E',
+    passFail = 'KUTSEHINDAMISVIIS_M',
+}
+
+export interface apiLessonHours {
     capacityHours: apiCapacityHours[];
 }
 
