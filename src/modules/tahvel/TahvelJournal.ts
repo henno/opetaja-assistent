@@ -25,7 +25,7 @@ class TahvelJournal {
             id: entry.id,
             date: entry.entryDate,
             name: entry.nameEt,
-            lessonType: entry.entryType === 'SISSEKANNE_T' ? LessonType.Lesson : (entry.entryType === 'SISSEKANNE_I' ? LessonType.IndependentWork : LessonType.Other),
+            lessonType: entry.entryType === 'SISSEKANNE_T' ? LessonType.lesson : (entry.entryType === 'SISSEKANNE_I' ? LessonType.independentWork : LessonType.other),
             lessonCount: entry.lessons,
             firstLessonStartNumber: entry.startLessonNr
         }));
@@ -169,10 +169,10 @@ class TahvelJournal {
                         </tr>
                     </thead>
                     <tbody>
-                        ${journal.missingGrades.map(({nameEt, studentList}) => `
+                        ${journal.missingGrades.map(({name, studentList}) => `
                             <tr>
-                                <td class="align-left">${nameEt}</td>
-                                <td class="align-left">${studentList.map(({fullname}) => fullname).join(', ')}</td>
+                                <td class="align-left">${name}</td>
+                                <td class="align-left">${studentList.map(({name}) => name).join(', ')}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -291,7 +291,7 @@ class TahvelJournal {
             .filter(entry => entry.entryType === 'SISSEKANNE_O' || entry.entryType === 'SISSEKANNE_L')
             .map(entry => ({
                 journalId: journalId,
-                nameEt: entry.nameEt,
+                name: entry.nameEt,
                 curriculumModuleOutcomes: entry.curriculumModuleOutcomes,
                 entryType: entry.entryType,
                 studentOutcomeResults: Object.values(entry.studentOutcomeResults || {}).map((result: apiGradeEntry) => ({

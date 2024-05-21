@@ -1,25 +1,38 @@
 export interface AssistentJournal {
     id: number;
-    nameEt: string;
+    name: string;
     entriesInTimetable: AssistentTimetableEntry[];
     entriesInJournal: AssistentJournalEntry[];
     differencesToTimetable: AssistentJournalDifference[];
     students: AssistentStudent[];
     learningOutcomes: AssistentLearningOutcomes[];
-    missingGrades: StudentsWithoutGrades[];
+    missingGrades: AssistentStudentsWithoutGrades[];
     independentWorkPlanned: number;
     independentWorkGiven: number;
     contactLessonsPlanned: number;
     contactLessonsGiven: number;
-    gradingType: string;
+    gradingType: AssistentGradingType;
     lessonMissing: boolean;
     lessonDiscrepancies: boolean;
 }
 
+export enum AssistentGradingType {
+    numeric = 'numeric',
+    passFail = 'passFail',
+}
+
 export interface AssistentStudent {
     studentId: number;
-    fullname: string;
-    status: string;
+    name: string;
+    status: AssistentStudentStatus;
+}
+
+export enum AssistentStudentStatus {
+    active = 'active',
+    academicLeave = 'academicLeave',
+    exmatriculated = "exmatriculated",
+    individualCurriculum = "individualCurriculum",
+    finished = "finished"
 }
 
 export interface AssistentJournalDifference {
@@ -59,26 +72,22 @@ export interface AssistentLessonTime {
 }
 
 export enum LessonType {
-    IndependentWork,
-    Lesson,
-    Other
+    independentWork = 'independentWork',
+    lesson = 'lesson',
+    other = 'other'
 }
 
 export interface AssistentLearningOutcomes {
-    nameEt: string,
-    studentOutcomeResults: StudentOutcomeResults[]
+    name: string,
+    studentOutcomeResults: AssistentStudentOutcomeResults[]
 }
 
-export interface StudentOutcomeResults {
+export interface AssistentStudentOutcomeResults {
     studentId: number,
 }
 
-export interface StudentsWithoutGrades {
-    nameEt: string,
-    studentList: student[]
+export interface AssistentStudentsWithoutGrades {
+    name: string,
+    studentList: AssistentStudent[]
 }
 
-export interface student {
-    studentId: number,
-    fullname: string
-}

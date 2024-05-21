@@ -8,7 +8,8 @@ import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import AssistentDom from "~src/shared/AssistentDom";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
-import {type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
+import {apiAssessmentEntry, type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
+import {AssistentGradingType} from "~src/shared/AssistentTypes";
 
 const urlForJournalsList = '/#/journals(\\?_menu)?';
 const urlForJournalEdit = '#/journal/\\d+/edit';
@@ -128,7 +129,7 @@ class Tahvel {
                     // Create a new journal object and add it to the cache
                     AssistentCache.journals.push({
                         id: entry.journalId,
-                        nameEt: entry.name,
+                        name: entry.name,
                         entriesInJournal: [],
                         entriesInTimetable: [],
                         differencesToTimetable: [],
@@ -167,7 +168,7 @@ class Tahvel {
                     journal.independentWorkPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.plannedHours || 0;
                     journal.contactLessonsGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.usedHours || 0;
                     journal.independentWorkGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.usedHours || 0;
-                    journal.gradingType = response.assessment;
+                    journal.gradingType = response.assessment === apiAssessmentEntry.numeric ? AssistentGradingType.numeric : AssistentGradingType.passFail;
                 } catch (error) {
                     console.error("Error fetching journal info:", error);
                     throw error; // Rethrow error for upper layers to handle
