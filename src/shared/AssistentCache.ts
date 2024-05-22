@@ -94,25 +94,29 @@ export class AssistentCache {
 
         if (!journal) return;
 
-        // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
-        for (const curriculumModule of journal.learningOutcomes) {
-            const missingGradesForModule: AssistentStudentsWithoutGrades = {
-                name: curriculumModule.name,
-                studentList: []
-            };
+        // If contact lessons count in timetable are equal or greater than contact lessons planned, then add data into cache
+        if (journal.entriesInTimetable.length >= journal.contactLessonsPlanned) {
+            // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
+            for (const curriculumModule of journal.learningOutcomes) {
+                const missingGradesForModule: AssistentStudentsWithoutGrades = {
+                    name: curriculumModule.name,
+                    studentList: []
+                };
 
-            for (const student of journal.students) {
-                // Check if student's status is active before calculating missing grades
-                if (student.status === AssistentStudentStatus.active && !curriculumModule.studentOutcomeResults.find(result => result.studentId === student.studentId)) {
-                    missingGradesForModule.studentList.push(student);
+                for (const student of journal.students) {
+                    // Check if student's status is active before calculating missing grades
+                    if (student.status === AssistentStudentStatus.active && !curriculumModule.studentOutcomeResults.find(result => result.studentId === student.studentId)) {
+                        missingGradesForModule.studentList.push(student);
+                    }
+                }
+
+                if (missingGradesForModule.studentList.length > 0) {
+                    missingGrades.push(missingGradesForModule);
                 }
             }
-
-            if (missingGradesForModule.studentList.length > 0) {
-                missingGrades.push(missingGradesForModule);
-            }
+            journal.missingGrades = missingGrades;
         }
-        journal.missingGrades = missingGrades;
+
     }
 
     static findJournalLessonsDifferencesFact(id: number) {
@@ -135,4 +139,4 @@ export class AssistentCache {
 }
 
 export default AssistentCache;
-//console.log('AssistentCache', AssistentCache.journals);
+console.log('AssistentCache', AssistentCache.journals);
