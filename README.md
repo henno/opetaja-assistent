@@ -41,6 +41,10 @@ Järgi neid samme assistendi paigaldamiseks:
 **Käsunduslepinguga töötajatele:**
 - [ ] Päevikud lehe tabelil on nurgas hammasratta ikoon, mille alt avaneb aken, kust saab linnukestega kontrollida, millist tüüpi tunde tabelis kuvatakse (“kontakt" ehk teoreetiline+praktiline, "e-õpe" ja “iseseisev"), et ei peaks arve loomisel vaeva nägema, et saada kätte iga aine kohta eraldi kontakttundide arv ja e-õppe tundide arv (kuna nad on erineva hinnaga).
 
+Ballot Box: ☐ (U+2610)
+White Square: □ (U+25A1)
+White Medium Square: ◻ (U+25FB)
+White Small Square: ▫ (U+25AB)
 
 ## Arendusversiooni kasutamine
 Arendusversioon on mõeldud arendajatele, kes soovivad muuta koodi. Pull requestid on teretulnud.
