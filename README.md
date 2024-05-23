@@ -27,9 +27,11 @@ Järgi neid samme assistendi paigaldamiseks:
 **Puuduvate tundidega seotud võimalused:**
 - [✔] Kui päevikute loendis on päevikuid, millel on vähemalt üks juba möödunud tund puudu, peaks selleni viiva lingi juures olema punane silt "Puuduvad tunnid".
 - [✔️] Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.
-- [☑] Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
-- [□] Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
-- [✅] Päevikute loendi vaates on loendi all "kokku" real kumulatiivne kokku loendur.
+
+☑ Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
+□ Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
+
+[✅] Päevikute loendi vaates on loendi all "kokku" real kumulatiivne kokku loendur.
 
 **Puuduvate hinnetega seotud võimalused:**
 - [✓] Kui päevikute loendis on lõppenud aineid, millel on vähemalt ühel õpilasel vähemalt üks hinne puudu, peaks selleni viiva lingi juures olema punane silt "Puuduvad hinded".
