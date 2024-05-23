@@ -32,7 +32,7 @@ Järgi neid samme assistendi paigaldamiseks:
 
 **Puuduvate hinnetega seotud võimalused:**
 - [✓] Kui päevikute loendis on lõppenud aineid, millel on vähemalt ühel õpilasel vähemalt üks hinne puudu, peaks selleni viiva lingi juures olema punane silt "Puuduvad hinded".
-- [ ] Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest hinnetest ja nupp, mille vajutamisel saab puuduvad hinded päevikusse lisada.
+- [x] Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest hinnetest ja nupp, mille vajutamisel saab puuduvad hinded päevikusse lisada.
 
 **Ainete lõppemisega seotud võimalused:**
 - [ ] Päevikud lehe tabelis on juba äralõppenud ained halli värviga, et kohe näeks, millised ained on juba läbi ja millised veel järel, et tegeleda lõppenud aine antud vs planeeritud tundide ebakõlaga, kui seda peaks juhtuma.
