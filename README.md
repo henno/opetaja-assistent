@@ -29,6 +29,7 @@ Järgi neid samme assistendi paigaldamiseks:
 - [✔️] Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.
 
 ☑ Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
+
 □ Päevikute loendi vaates on uus tulp "Kokku", milles on kõikide perioodide antud/kokku tunnid kumulatiivselt summeeritud.
 
 [✅] Päevikute loendi vaates on loendi all "kokku" real kumulatiivne kokku loendur.
