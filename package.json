@@ -5,7 +5,7 @@
   "description": "„Õpetaja assistent“ on Chrome'i laiendus, mis on loodud selleks, et aidata õpetajatel õppeinfosüsteemis rühmade päevikuid kontrollida ja nendes esinevaid puudujääke, nagu puuduolevad tunnid või määramata lõpphinded, automaatselt kõrvaldada. Laiendus tuvastab ja tõstab esile puuduolevad tunnid ja hinded, andes ühtlasi ülevaate ainete lõpetamise staatusest ja paljust muust. See on mõeldud olema tõhus vahend õpetajatele, muutes nende töö lihtsamaks ja korraldatumaks.",
   "author": " Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.",
   "engines": {
-    "pnpm": ">=7.5.0"
+    "pnpm": ">=9.0.0"
   },
   "scripts": {
     "lint": "eslint --fix src",
