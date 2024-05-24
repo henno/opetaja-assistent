@@ -45,6 +45,11 @@ class Tahvel {
 
         try {
 
+            TahvelJournal.addLearningOutcomesDropdown().then(
+                () => console.log("Learning outcomes dropdown injection event listeners added")
+            );
+
+
             // Set the base URL for the API
             Api.url = Api.extractBaseUrl() + "hois_back";
 

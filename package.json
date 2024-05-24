@@ -17,6 +17,7 @@
   "dependencies": {
     "@types/luxon": "^3.4.2",
     "luxon": "^3.4.4",
+    "slim-select": "^2.8.2",
     "svelte": "^4.2.12",
     "svelte-preprocess": "^5.1.3"
   },

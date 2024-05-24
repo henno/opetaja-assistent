@@ -6,11 +6,14 @@ import {
     type AssistentLearningOutcomes,
     LessonType
 } from "~src/shared/AssistentTypes";
+import SlimSelect from 'slim-select';
+import 'slim-select/dist/slimselect.css';
 import {DateTime} from 'luxon';
 import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
+
 
 class TahvelJournal {
     static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
@@ -180,6 +183,7 @@ class TahvelJournal {
             </div>`);
 
         journalHeaderElement.before(missingGradesTable);
+
     }
 
     static async setJournalEntryStartLessonNr(discrepancy: AssistentJournalDifference): Promise<void> {
@@ -299,6 +303,95 @@ class TahvelJournal {
                 }))
             }));
     }
+
+    static async addLearningOutcomesDropdown() {
+        let dialogContainer = null;
+
+        new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length > 0) {
+                    const addedNode = mutation.addedNodes[0] as HTMLElement;
+                    if (addedNode.tagName === 'DIV' && addedNode.classList.contains('md-dialog-container')) {
+
+                        dialogContainer = addedNode;
+
+                        console.log('added dialogContainer', dialogContainer);
+
+                        // Set up an interval to poll the dialog container for the presence of specific elements
+                        const i = setInterval(() => {
+
+
+                            // Check if the dialog container's innerHTML contains 4 specific substrings:
+                            if (dialogContainer.innerHTML.includes('Sissekande liik')
+                                && dialogContainer.innerHTML.includes('Auditoorne õpe')
+                                && dialogContainer.innerHTML.includes('Iseseisev õpe')
+                                && dialogContainer.innerHTML.includes('Kodutöö')
+                            ) {
+
+                                // Clear interval to stop further polling
+                                clearInterval(i);
+
+                                // Get the learning outcomes from DOM
+                                const learningOutcomeTrs = document.querySelectorAll('div[ng-if="journal.includesOutcomes"] tr')
+                                console.log('learningOutcomeTrs', learningOutcomeTrs);
+
+                                if (!learningOutcomeTrs.length) {
+                                    console.error('Learning outcomes not found');
+                                    return;
+                                }
+
+                                // Extract name (nth-child(3)) and code (nth-child(2)) from each learning outcome
+                                const learningOutcomes = Array.from(learningOutcomeTrs).map(tr => {
+                                    const name = tr.querySelector('td:nth-child(3)').textContent;
+                                    const code = tr.querySelector('td:nth-child(2)').textContent;
+                                    return {name, code};
+                                })
+
+                                console.log('learningOutcomes', learningOutcomes);
+
+                                // Inject the learning outcomes dropdown
+                                const learningOutcomesDropdown = AssistentDom.createStructure(`
+                                    <div class="assistent-learning-outcomes-dropdown">
+                                        <label for="selectElement">Õpiväljundid</label>
+                                        <select id="selectElement" name="selectElement" multiple>
+                                            ${learningOutcomes.map(outcome => `
+                                                <option value="${outcome.code}">${outcome.name}</option>
+                                            `).join('')}
+                                        </select>
+                                    </div>
+                                `);
+
+
+                                document.querySelector('textarea[ng-model="journalEntry.content"]').closest('md-input-container').closest('div').after(learningOutcomesDropdown);
+
+                                // Initialize SlimSelect
+                                const selectElement = document.getElementById('selectElement');
+                                if (selectElement) {
+                                    new SlimSelect({
+                                        select: selectElement,
+                                        settings: {
+                                            hideSelected: true,
+                                        }
+                                    });
+                                }
+
+                            }
+
+                        }, 100);
+
+                        // Clear interval after 5 seconds
+                        setTimeout(() => {
+                            clearInterval(i);
+                        }, 5000);
+                    }
+                }
+            });
+
+        }).observe(document.body, {childList: true, subtree: true});
+
+
+    }
+
 
     private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {
         const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
