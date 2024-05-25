@@ -148,7 +148,8 @@ class TahvelJournalEntryDialog {
     };
 
     static async fillEntryName(learningOutcomesSlimSelect, learningOutcomes: AssistentLearningOutcomes[]) {
-        const content = document.querySelector('textarea[ng-model="journalEntry.content"]').value;
+        const contentElement = document.querySelector('textarea[ng-model="journalEntry.content"]') as HTMLTextAreaElement;
+        const content = contentElement.value;
         const truncatedContent = content.slice(0, 30);
         const ellipsis = content.length > 30 ? '...' : '';
         const outcomes = learningOutcomesSlimSelect.getSelected()
