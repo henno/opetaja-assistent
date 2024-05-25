@@ -90,12 +90,11 @@ class TahvelDom {
 
     }
 
-    static async fillTextbox(inputNameLessons: string, value: string): Promise<void> {
-        const inputElement = await AssistentDom.waitForElementToBeVisible(`input[name="${inputNameLessons}"]`) as HTMLInputElement;
-        if (!inputElement) {
-            console.error(`Input element not found for name ${inputNameLessons}.`);
-            return;
-        }
+    static async fillTextbox(selector: string, value: string, makeTheBorderGreen = true): Promise<void> {
+
+        const inputElement = await AssistentDom.waitForElementToBeVisible(selector) as HTMLInputElement;
+        if (!inputElement) throw new Error('Textbox ' + selector + ' not found.');
+
         inputElement.value = value.toString();
 
         // Dispatch an input event to notify AngularJS of the input value change
@@ -103,7 +102,9 @@ class TahvelDom {
         inputElement.dispatchEvent(inputEvent);
 
         // Make the input border green
-        inputElement.style.border = '2px solid #40ff6d';
+        if (makeTheBorderGreen) {
+            inputElement.style.border = '2px solid #40ff6d';
+        }
 
     }
 

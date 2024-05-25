@@ -5,6 +5,7 @@ import TahvelStudyYear from "./TahvelStudyYear";
 import TahvelTimetable from "~src/modules/tahvel/TahvelTimetable";
 import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
+import TahvelJournalEntryDialog from "~src/modules/tahvel/TahvelJournalEntryDialog";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import AssistentDom from "~src/shared/AssistentDom";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
@@ -45,7 +46,7 @@ class Tahvel {
 
         try {
 
-            TahvelJournal.addLearningOutcomesDropdown().then(
+            TahvelJournalEntryDialog.addLearningOutcomesDropdown().then(
                 () => console.log("Learning outcomes dropdown injection event listeners added")
             );
 
@@ -255,6 +256,38 @@ class Tahvel {
                     margin-top: 20px; 
                     margin-left: 18px;
                 }
+
+                #assistent-learning-outcomes-dropdown {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    background-color: transparent;
+                    font-size: 13px;
+                    color: #333;
+                }
+                
+                #assistent-learning-outcomes-dropdown > div.ss-main {
+                    font-size: 13px;
+                    color: red !important;
+                    background-color: #f5f5f5;
+                }
+                
+                .ss-content .ss-list .ss-option {
+                    font-size: 13px;                
+                }
+                
+
+                #assistent-learning-outcomes-dropdown > div.ss-main > div.ss-values > div.ss-placeholder {
+                    font-size: 13px;
+                    color: rgba(255, 64, 129, 0.87);
+                }
+                
+                #assistent-learning-outcomes-dropdown > div.ss-main > div.ss-values > div.ss-value {
+                    padding: 5px;
+                    margin: 0;
+                    background-color: rgba(255, 64, 129, 0.87);
+                }
+                
             </style>`));
     }
 }
