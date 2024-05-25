@@ -2,6 +2,7 @@ import SlimSelect from 'slim-select';
 import 'slim-select/dist/slimselect.css';
 import AssistentDom from "~src/shared/AssistentDom";
 import TahvelDom from "~src/modules/tahvel/TahvelDom";
+import type {AssistentLearningOutcomes} from "~src/shared/AssistentTypes";
 
 
 class TahvelJournalEntryDialog {
@@ -17,7 +18,7 @@ class TahvelJournalEntryDialog {
                         dialogContainer = addedNode;
 
                         // Set up an interval to poll the dialog container for the presence of specific elements
-                        const i = setInterval(() => {
+                        const i = setInterval(async () => {
 
                             // Check if the dialog container's innerHTML contains 4 specific substrings:
                             if (dialogContainer.innerHTML.includes('Sissekande liik')
@@ -44,6 +45,9 @@ class TahvelJournalEntryDialog {
 
                                 this.removeGroupNameIfAllOutcomesAreForTheSameGroup(learningOutcomes);
 
+                                // Wait until the form has completed loading by waiting for the close button to have a focus
+                                await AssistentDom.waitForElement('button.md-focused');
+
                                 // Inject the learning outcomes dropdown after Sisu textarea
                                 journalEntryDialog.querySelector('textarea[ng-model="journalEntry.content"]').closest('md-input-container').closest('div').after(AssistentDom.createStructure(`
                                     <div layout="row" layout-sm="column" layout-xs="column" class="layout-xs-column layout-sm-column layout-row">
@@ -58,42 +62,42 @@ class TahvelJournalEntryDialog {
 
                                 // Initialize SlimSelect
                                 const learningOutcomesSelectElement = journalEntryDialog.querySelector('#assistent-journal-entry-dialog-learning-outcomes-select-element');
-                                if (learningOutcomesSelectElement) {
-                                    const learningOutcomesSlimSelect = new SlimSelect({
-                                        select: learningOutcomesSelectElement,
-                                        settings: {
-                                            contentLocation: document.getElementById('#slim-select-content-container'),
-                                            hideSelected: true,
-                                            showSearch: false,
-                                            placeholderText: 'Vali ÕV-d, millega see iseseisev töö seotud on (vajalik lõpuhinnete arvutamiseks)',
-                                            allowDeselect: true
+                                if (!learningOutcomesSelectElement) throw new Error('Learning outcomes select element not found');
+                                const learningOutcomesSlimSelect = new SlimSelect({
+                                    select: learningOutcomesSelectElement,
+                                    settings: {
+                                        contentLocation: document.getElementById('#slim-select-content-container'),
+                                        hideSelected: true,
+                                        showSearch: false,
+                                        placeholderText: 'Vali ÕV-d, millega see iseseisev töö seotud on (vajalik lõpuhinnete arvutamiseks)',
+                                        allowDeselect: true
 
-                                        }, events: {
-                                            afterChange: newVal => {
-                                                console.log('New value:', newVal);
-                                                console.log('Selected values:', learningOutcomesSlimSelect.getSelected());
-
-                                                TahvelDom.fillTextbox(
-                                                    'input[ng-model="journalEntry.nameEt"]',
-                                                    learningOutcomesSlimSelect.getSelected()
-                                                        .map(code => learningOutcomes.find(o => o.code === code)?.code)
-                                                        .join(', '));
-                                            }
+                                    }, events: {
+                                        afterChange: newVal => {
+                                            console.log('New value:', newVal);
+                                            console.log('Selected values:', learningOutcomesSlimSelect.getSelected());
+                                            this.fillEntryName(learningOutcomesSlimSelect, learningOutcomes);
                                         }
-                                    });
-                                    const sissekandeNimetusInput = journalEntryDialog.querySelector('[ng-model="journalEntry.nameEt"]') as HTMLInputElement;
-                                    if(!sissekandeNimetusInput) throw new Error('Sissekande input not found');
-                                    // Set default values from sissekandeNimetus to learningOutcomesSlimSelect
-                                    const sissekandeNimetus = sissekandeNimetusInput.value;
-                                    // convert comma separated values to json array
-                                    const sissekandeNimetusArray = sissekandeNimetus.split(',').map(s => s.trim());
-                                    // vallidate if sissekandeNimetusArray is not empty
-                                    if (sissekandeNimetusArray.length > 0) {
-                                        // set selected values to learningOutcomesSlimSelect
-                                        learningOutcomesSlimSelect.setSelected(sissekandeNimetusArray);
                                     }
+                                });
 
+                                const sissekandeNimetusInput = journalEntryDialog.querySelector('[ng-model="journalEntry.nameEt"]') as HTMLInputElement;
+                                if (!sissekandeNimetusInput) throw new Error('Sissekande input not found');
+
+                                // Split sissekandeNimetus by '(' to separate the content and learning outcomes
+                                const [content, learningOutcomesString] = sissekandeNimetusInput.value.split('(');
+
+                                console.log('content:', content);
+
+                                // Remove the closing parenthesis from learningOutcomesString and split by ',' to get an array of learning outcomes
+                                const learningOutcomesArray = learningOutcomesString.replace(')', '').split(',').map(s => s.trim());
+
+                                // Validate if learningOutcomesArray is not empty
+                                if (learningOutcomesArray.length > 0) {
+                                    // Set selected values to learningOutcomesSlimSelect
+                                    learningOutcomesSlimSelect.setSelected(learningOutcomesArray);
                                 }
+
 
                                 const independentWorkCheckbox = journalEntryDialog.querySelector('md-checkbox[aria-label="Iseseisev õpe"]');
                                 if (!independentWorkCheckbox) throw new Error('Independent work checkbox not found');
@@ -101,11 +105,28 @@ class TahvelJournalEntryDialog {
                                 const learningOutcomesDropdown = journalEntryDialog.querySelector('#assistent-learning-outcomes-dropdown') as HTMLElement;
                                 if (!learningOutcomesDropdown) throw new Error('Learning outcomes dropdown not found');
 
+                                const entryTypeElement = journalEntryDialog.querySelector('md-select[ng-model="journalEntry.entryType"]') as HTMLElement;
+                                if (!entryTypeElement) throw new Error('Learning outcomes dropdown not found');
+
+                                function independentWorkCheckboxIsChecked() {
+                                    return independentWorkCheckbox.getAttribute('aria-checked') === 'true';
+                                }
+
+                                // add event listener to entryTypeElement to overwrite the entry name with the selected learning outcomes
+                                entryTypeElement.addEventListener('focus', () => {
+
+                                    if (independentWorkCheckboxIsChecked()) {
+                                        this.fillEntryName(learningOutcomesSlimSelect, learningOutcomes);
+                                    }
+                                });
+
                                 const toggleDropdownDisplay = () => {
-                                    learningOutcomesDropdown.style.display = independentWorkCheckbox.getAttribute('aria-checked') === 'true' ? 'block' : 'none';
+                                    learningOutcomesDropdown.style.display = independentWorkCheckboxIsChecked() ? 'block' : 'none';
                                 };
                                 toggleDropdownDisplay();
                                 independentWorkCheckbox.addEventListener('click', toggleDropdownDisplay);
+
+
                             }
 
                         }, 300);
@@ -125,6 +146,18 @@ class TahvelJournalEntryDialog {
             outcomes.forEach(outcome => outcome.name = outcome.name.replace(/\s*\([^)]*\)\s*$/, '').trim());
         }
     };
+
+    static async fillEntryName(learningOutcomesSlimSelect, learningOutcomes: AssistentLearningOutcomes[]) {
+        const content = document.querySelector('textarea[ng-model="journalEntry.content"]').value;
+        const truncatedContent = content.slice(0, 30);
+        const ellipsis = content.length > 30 ? '...' : '';
+        const outcomes = learningOutcomesSlimSelect.getSelected()
+            .map(code => learningOutcomes.find(o => o.code === code)?.code)
+            .join(', ');
+        const entryName = `${truncatedContent}${ellipsis} (${outcomes})`;
+        TahvelDom.fillTextbox('input[ng-model="journalEntry.nameEt"]', entryName);
+    }
+
 }
 
 export default TahvelJournalEntryDialog;

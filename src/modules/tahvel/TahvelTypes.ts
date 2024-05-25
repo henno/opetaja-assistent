@@ -16,12 +16,6 @@ export interface apiJournalEntry {
     id: number;
 }
 
-export interface TahvelStudyYear {
-    id: number;
-    startDate: string;
-    endDate: string;
-}
-
 export interface apiStudentEntry {
     studentId: number;
     fullname: string;
@@ -67,4 +61,10 @@ export interface apiCapacityHours {
     capacity: string;
     plannedHours: number;
     usedHours: number;
+}
+
+export interface TahvelStudyYear {
+    id: number;
+    startDate: string;
+    endDate: string;
 }

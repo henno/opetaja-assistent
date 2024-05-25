@@ -79,7 +79,8 @@ export enum LessonType {
 
 export interface AssistentLearningOutcomes {
     name: string,
-    studentOutcomeResults: AssistentStudentOutcomeResults[]
+    code?: string,
+    studentOutcomeResults?: AssistentStudentOutcomeResults[]
 }
 
 export interface AssistentStudentOutcomeResults {
