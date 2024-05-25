@@ -81,6 +81,18 @@ class TahvelJournalEntryDialog {
                                             }
                                         }
                                     });
+                                    const sissekandeNimetusInput = journalEntryDialog.querySelector('[ng-model="journalEntry.nameEt"]') as HTMLInputElement;
+                                    if(!sissekandeNimetusInput) throw new Error('Sissekande input not found');
+                                    // Set default values from sissekandeNimetus to learningOutcomesSlimSelect
+                                    const sissekandeNimetus = sissekandeNimetusInput.value;
+                                    // convert comma separated values to json array
+                                    const sissekandeNimetusArray = sissekandeNimetus.split(',').map(s => s.trim());
+                                    // vallidate if sissekandeNimetusArray is not empty
+                                    if (sissekandeNimetusArray.length > 0) {
+                                        // set selected values to learningOutcomesSlimSelect
+                                        learningOutcomesSlimSelect.setSelected(sissekandeNimetusArray);
+                                    }
+
                                 }
 
                                 const independentWorkCheckbox = journalEntryDialog.querySelector('md-checkbox[aria-label="Iseseisev õpe"]');

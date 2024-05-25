@@ -6,7 +6,6 @@ import {
     type AssistentLearningOutcomes,
     LessonType
 } from "~src/shared/AssistentTypes";
-import 'slim-select/dist/slimselect.css';
 import {DateTime} from 'luxon';
 import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
