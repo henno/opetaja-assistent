@@ -46,10 +46,9 @@ class Tahvel {
 
         try {
 
-            TahvelJournalEntryDialog.addLearningOutcomesDropdown().then(
-                () => console.log("Learning outcomes dropdown injection event listeners added")
+            TahvelJournalEntryDialog.initCustomizations().then(
+                () => console.log("Journal entry dialog customizations done"),
             );
-
 
             // Set the base URL for the API
             Api.url = Api.extractBaseUrl() + "hois_back";
@@ -270,6 +269,10 @@ class Tahvel {
                     font-size: 13px;
                     color: red !important;
                     background-color: #f5f5f5;
+                    min-height: 50px;
+                    border: 0;
+                    border-bottom: 1px solid #d7d7d7;
+                    border-radius: 0;
                 }
                 
                 .ss-content .ss-list .ss-option {
