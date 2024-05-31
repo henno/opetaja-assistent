@@ -4,6 +4,7 @@ import type {AssistentTimetableEntry} from "~src/shared/AssistentTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import type {apiTimetableEntry} from "~src/modules/tahvel/TahvelTypes";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 class TahvelTimetable {
 
@@ -11,8 +12,7 @@ class TahvelTimetable {
     static async fetchEntries(): Promise<AssistentTimetableEntry[]> {
         const response = await Api.get(`/timetableevents/timetableByTeacher/${TahvelUser.schoolId}?from=${StudyYear.minDate}&lang=ET&teachers=${TahvelUser.teacherId}&thru=${StudyYear.maxDate}`);
         if (!response || !response.timetableEvents) {
-            console.error("Error: Timetable events data is missing or in unexpected format");
-            return;
+            throw new AssistentDetailedError(500, 'Error', 'Timetable events data is missing or in unexpected format');
         }
 
         // Filter out events without journalId and transform the data to AssistentTimetableEntry type

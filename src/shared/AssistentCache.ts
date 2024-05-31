@@ -139,4 +139,4 @@ export class AssistentCache {
 }
 
 export default AssistentCache;
-//console.log('AssistentCache', AssistentCache.journals);
+console.log('AssistentCache', AssistentCache.journals);

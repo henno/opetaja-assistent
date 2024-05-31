@@ -1,3 +1,5 @@
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
+
 class AssistentDom {
     static createButton(className: string, textContent: string, clickHandler: () => void): HTMLButtonElement {
         const button = document.createElement('button');
@@ -74,15 +76,10 @@ class AssistentDom {
         let element: Element | null = null;
         let timeoutOccurred = false;
 
-        try {
-            element = await AssistentDom.waitForElement(s);
+        element = await AssistentDom.waitForElement(s);
 
-            if (!element) {
-                throw new Error(`Element ${s} not found`);
-            }
-        } catch (error) {
-            console.error(`Error in waitForElement: ${error}`);
-            throw error;
+        if (!element) {
+            throw new AssistentDetailedError(500, 'Element not found', `Element ${s} not found.`);
         }
 
         let observer: IntersectionObserver;
@@ -111,13 +108,7 @@ class AssistentDom {
                 reject(new Error(`Timeout: Element ${s} not visible within ${timeout}ms`));
             }, timeout);
         });
-
-        try {
-            return await Promise.race([observerPromise, timeoutPromise]);
-        } catch (error) {
-            console.error(`Error in waitForElementToBeVisible: ${error}`);
-            throw error;
-        }
+        return await Promise.race([observerPromise, timeoutPromise]);
     }
 
     static async waitForAttributeToAppear(element: Element, attribute: string, timeout: number = 3000): Promise<string> {
@@ -153,8 +144,7 @@ class AssistentDom {
 
         // Check if the HTML string is valid and contains only one root element
         if (tempDiv.childNodes.length !== 1) {
-            console.error('The provided HTML string is either not valid or does not contain exactly one root element.');
-            return null;
+            throw new AssistentDetailedError(500, 'Invalid HTML', 'HTML string must contain exactly one root element');
         }
 
         // Get the root element
@@ -167,6 +157,21 @@ class AssistentDom {
         }
 
         return rootElement;
+    }
+
+    static showErrorMessage(title: string, message: string, code: number): void {
+        console.log(`Assistent error: ${title} - ${message}`)
+        const messageBox = document.body.appendChild(AssistentDom.createStructure(`
+            <div class="assistent-message-box">
+                <div class="assistent-message-box-title">Õpetaja assistent viga ${code}</div>
+                <div class="assistent-message-box-message">${title}<br><br>${message}</div>
+                <button class="assistent-message-box-close-button">Close</button>
+            </div>
+        `));
+        messageBox.querySelector('.assistent-message-box-close-button').addEventListener('click', () => {
+            messageBox.remove();
+        });
+
     }
 }
 

@@ -1,4 +1,5 @@
 import type {PlasmoCSConfig} from "plasmo"
+import Tahvel from '~src/modules/tahvel';
 
 // Define URLs
 export const config: PlasmoCSConfig = {
@@ -9,6 +10,4 @@ export const config: PlasmoCSConfig = {
     all_frames: true,
 }
 
-import Tahvel from '~src/modules/tahvel';
-
-Tahvel.init()
+Tahvel.init().catch(error => Tahvel.handleError(error));

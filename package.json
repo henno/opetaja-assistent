@@ -27,6 +27,7 @@
     "@tsconfig/svelte": "^5.0.4",
     "@types/chrome": "^0.0.237",
     "@types/node": "^20.12.5",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
     "eslint": "^9.1.1",
     "globals": "^15.1.0",
     "plasmo": "^0.86.3",

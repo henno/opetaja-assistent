@@ -11,6 +11,7 @@ import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./T
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 
 class TahvelJournal {
@@ -18,8 +19,7 @@ class TahvelJournal {
 
         const response: apiJournalEntry[] = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
         if (!response) {
-            console.error("Error: Journal entries data is missing or in unexpected format");
-            return;
+            throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
         }
 
         return response.map(entry => ({
@@ -57,12 +57,11 @@ class TahvelJournal {
         const journalId = parseInt(window.location.href.split('/')[5]);
 
         if (!journalId) {
-            console.error('Journal ID ' + journalId + ' not found in URL');
-            return null;
+            throw new AssistentDetailedError(500, 'Error', 'Journal ID not found in URL');
         }
         const journal = AssistentCache.getJournal(journalId)
         if (!journal) {
-            console.error('Journal ' + journalId + ' not found in cache');
+            throw new AssistentDetailedError(500, 'Error', 'Journal data not found in cache');
             return null;
         }
 
@@ -73,8 +72,7 @@ class TahvelJournal {
         const journalHeaderElement = document.querySelector('.ois-form-layout-padding') as HTMLElement;
 
         if (!journalHeaderElement) {
-            console.error('Journal header element not found to inject lesson discrepancies table');
-            return;
+            throw new AssistentDetailedError(500, 'Error', 'Journal header element not found');
         }
 
         const journal = await TahvelJournal.getJournalWithValidation();
@@ -108,8 +106,7 @@ class TahvelJournal {
             try {
                 await AssistentDom.waitForElement('table.journalTable tbody tr td');
             } catch (e) {
-                console.error('tableJournalTable NOT FOUND!' + e.message);
-                return;
+                throw new AssistentDetailedError(500, 'Error', 'Journal table not found');
             }
 
             // Iterate over the discrepancies and create a row with the appropriate action button
@@ -228,8 +225,7 @@ class TahvelJournal {
         const checkbox = await AssistentDom.waitForElement('md-checkbox[aria-label="Auditoorne õpe"]') as HTMLElement;
 
         if (!checkbox) {
-            console.error("Checkbox not found.");
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Checkbox element not found.');
         }
 
         // Simulate a click on the checkbox
@@ -243,12 +239,7 @@ class TahvelJournal {
     }
 
     static async setJournalEntryTypeAsLesson(): Promise<void> {
-        try {
-            await TahvelDom.selectDropdownOption("journalEntry.entryType", "SISSEKANNE_T");
-
-        } catch (error) {
-            console.error("An error occurred in setJournalEntryTypeAsLesson: ", error);
-        }
+        await TahvelDom.selectDropdownOption("journalEntry.entryType", "SISSEKANNE_T");
     }
 
     static async setJournalEntryDate(discrepancy: AssistentJournalDifference): Promise<void> {
@@ -257,8 +248,7 @@ class TahvelJournal {
         const datepickerInput = await AssistentDom.waitForElement('.md-datepicker-input') as HTMLInputElement;
 
         if (!datepickerInput) {
-            console.error("Select element not found.");
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Datepicker input field not found.');
         }
 
         // Extract only the date portion from the provided date string
@@ -266,7 +256,7 @@ class TahvelJournal {
         const formattedDate = DateTime.fromJSDate(date).toFormat('dd.LL.yyyy');
 
         if (!datepickerInput) {
-            console.error("%cDatepicker input field not found.", "color: red;");
+            throw new AssistentDetailedError(500, 'Element not found', 'Datepicker input field not found.');
         }
 
         // Set the value for the datepicker input
@@ -285,8 +275,7 @@ class TahvelJournal {
         const response: apiCurriculumModuleEntry[] = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
 
         if (!response) {
-            console.error("Error: Journal entries data is missing or in unexpected format");
-            return;
+            throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
         }
 
         return response
@@ -305,15 +294,7 @@ class TahvelJournal {
     private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {
         const isLessonsInDiaryButNotInTimetable = discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0;
         const isLessonsInTimetableButNotInDiary = discrepancy.timetableLessonCount > 0 && discrepancy.journalLessonCount === 0;
-
-        let journalEntryElement: HTMLElement;
-
-        try {
-            journalEntryElement = await TahvelJournal.findJournalEntryElement(discrepancy);
-        } catch (e) {
-            console.error('Journal entry element not found: ' + e.message);
-            return;
-        }
+        const journalEntryElement: HTMLElement = await TahvelJournal.findJournalEntryElement(discrepancy);
 
         const action = {
             color: "",
@@ -340,10 +321,9 @@ class TahvelJournal {
             action.elementOrSelector = await AssistentDom.waitForElement('button[ng-click="addNewEntry()"]') as HTMLElement;
 
             if (!action.elementOrSelector) {
-                // debugger;
-                console.error("Add button not found");
-                return;
+                throw new AssistentDetailedError(500, 'Element not found', 'Add new entry button not found.');
             }
+
             action.callback = async () => {
                 await TahvelJournal.setJournalEntryTypeAsLesson();
                 await TahvelJournal.setJournalEntryDate(discrepancy);

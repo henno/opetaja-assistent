@@ -1,4 +1,5 @@
 import AssistentDom from "~src/shared/AssistentDom";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 class TahvelDom {
     static createExclamationMark(id: string, color: string, innerHTML: string, title: string): HTMLSpanElement {
@@ -42,8 +43,7 @@ class TahvelDom {
         const mdSelectSelector = `md-select[ng-model="${model}"]`;
         const selectElement = await AssistentDom.waitForElementToBeVisible(mdSelectSelector) as HTMLSelectElement
         if (!selectElement) {
-            console.error("Select `${mdSelectSelector}` not found.");
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdSelectSelector + ' not found.');
         }
 
         // Click the dropdown to open it
@@ -57,16 +57,14 @@ class TahvelDom {
         const mdContentSelector = `md-content[id="${mdContentId}"]`
         const mdContentElement = await AssistentDom.waitForElementToBeVisible(mdContentSelector) as HTMLElement;
         if (!mdContentElement) {
-            console.error('Element ' + mdContentSelector + ' not found.');
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdContentSelector + ' not found.');
         }
 
         // Find and option element with the desired value
         const mdOptionSelector = `${mdContentSelector} md-option[value="${value}"]`;
         const optionElement = await AssistentDom.waitForElement(mdOptionSelector) as HTMLElement;
         if (!optionElement) {
-            console.error('Option element ' + mdOptionSelector + ' not found.');
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Option element ' + mdOptionSelector + ' not found.');
         }
 
         // Make the right option background green
@@ -118,8 +116,7 @@ class TahvelDom {
                 element.click();
                 if (clickCallback) clickCallback();
             } else {
-                console.error(elementOrSelector);
-                console.error('...element not found');
+                throw new AssistentDetailedError(500, 'Element not found', 'Element ' + elementOrSelector + ' not found.');
             }
         })
 

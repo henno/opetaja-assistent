@@ -4,17 +4,12 @@ import {type AssistentStudent, AssistentStudentStatus} from "~src/shared/Assiste
 
 class TahvelStudents {
     static async fetchEntries(journalId: number): Promise<AssistentStudent[]> {
-        try {
-            const response: apiStudentEntry[] = await Api.get(`/journals/${journalId}/journalStudents`);
-            return response.map(({studentId, fullname, status}) => ({
-                studentId,
-                name: fullname,
-                status: this.mapStatus(status)
-            }));
-        } catch (error) {
-            console.error("Error fetching student entries:", error);
-            throw error;
-        }
+        const response: apiStudentEntry[] = await Api.get(`/journals/${journalId}/journalStudents`);
+        return response.map(({studentId, fullname, status}) => ({
+            studentId,
+            name: fullname,
+            status: this.mapStatus(status)
+        }));
     }
 
     static mapStatus(status: apiStudentStatus): AssistentStudentStatus {
