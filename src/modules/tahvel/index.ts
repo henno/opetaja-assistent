@@ -56,6 +56,12 @@ class Tahvel {
 
         // Fetch data
         await TahvelUser.init();
+
+        // Check if the user is logged in
+        if (!TahvelUser.schoolId) {
+            return;
+        }
+
         await TahvelStudyYear.init();
         AssistentCache.lessonTimes = TahvelLessonTimes[TahvelUser.schoolId];
 

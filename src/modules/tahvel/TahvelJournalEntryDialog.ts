@@ -92,7 +92,7 @@ class TahvelJournalEntryDialog {
 
     private static updateEntryNameOnContentChange() {
         TahvelJournalEntryDialog.updateEntryName();
-    }
+    }x
 
     private static updateEntryNameOnEntryTypeChange() {
         TahvelJournalEntryDialog.updateEntryName();

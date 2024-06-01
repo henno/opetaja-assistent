@@ -40,14 +40,15 @@ class AssistentApiClient {
             // Handle JSON parsing errors
         } catch (e) {
 
+            console.error(`Request: ${method} ${AssistentApiClient.url}${endpoint}`);
+            console.error(`Response: ${response.status} ${response.statusText}`);
+            console.error(`Response body: ${responseBody}`);
+
             // Just empty response body
             if (!responseBody) {
-                throw new AssistentDetailedError(
-                    response.status,
-                    `Error ${response.status}`,
-                    'The data received from the server was empty which means that something went wrong. We apologize for the inconvenience. Please try again later.'
-                );
+                return null;
             }
+
 
             // Non-JSON response
             throw new AssistentDetailedError(
