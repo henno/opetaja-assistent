@@ -189,7 +189,7 @@ class TahvelJournal {
                             <tr>
                                 <td class="align-left">${name}</td>
                                 <td class="align-left">${studentList.map(({name}) => name).join(', ')}</td>
-                                <td><button class="md-raised md-button md-ink-ripple md-accent">${studentList.length > 1 ? 'Lisa hindeid' : 'Lisa hinne'}</button></td>
+                                <td><button class="md-raised md-button md-ink-ripple md-primary">${studentList.length > 1 ? 'Lisa hindeid' : 'Lisa hinne'}</button></td>
                             </tr>
                         `).join('')}
                         <tr>
@@ -209,7 +209,8 @@ class TahvelJournal {
 
         journalHeaderElement.before(missingGradesTable);
 
-        document.querySelectorAll('#assistent-grades-table button.md-accent').forEach((button, index) => {
+        // Mark that missing grades table has been injected
+        document.querySelectorAll('#assistent-grades-table button.md-primary').forEach((button, index) => {
             button.addEventListener('click', async () => {
 
                 TahvelJournal.setGradeInputAsSelectToFalse();
@@ -301,6 +302,7 @@ class TahvelJournal {
             return idRegex.test(a.getAttribute('href'));
         });
     }
+
     // Function to find elements by exact text content
     static clickQuickUpdate(learningOutcome) {
         // TODO: add english language support
@@ -376,6 +378,44 @@ class TahvelJournal {
         if (saveButton) {
             saveButton.classList.add('blink');
         }
+
+        saveButton.addEventListener('click', () => {
+            // convert discrepancy.date to dd.mm.yyyy
+            const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+
+            // If user clicks saveButton then hide tr where first td element contains discrepancy.date in table id="assistent-discrepancies-table"
+            const tr = Array.from(document.querySelectorAll('#assistent-discrepancies-table tbody tr')).find(tr => {
+                const td = tr.querySelector('td');
+                return td?.textContent === date;
+            }) as HTMLElement;
+
+            if (tr) {
+                tr.style.display = 'none';
+            }
+
+            // count tr's left in #assistent-discrepancies-table
+            const trs = document.querySelectorAll('#assistent-discrepancies-table tbody tr');
+            console.log('trs', trs.length);
+
+            // trs.length === 1 then remove #assistent-discrepancies-table
+            if (trs.length === 1) {
+                const table = document.querySelector('#assistent-discrepancies-table') as HTMLElement;
+                table.style.display = 'none';
+            }
+
+            // remove data from discrpanciesToTimetable
+            // Retrieve the journal from the cache using the journal ID parsed from the current URL
+            const journal = AssistentCache.getJournal(parseInt(window.location.href.split('/')[5]));
+
+            // Find the index of the discrepancy in the journal's differencesToTimetable array that matches the current discrepancy date
+            const index = journal.differencesToTimetable.findIndex(d => d.date === discrepancy.date);
+
+            // Remove the discrepancy from the journal's differencesToTimetable array using the found index
+            journal.differencesToTimetable.splice(index, 1);
+
+            // Update the journal in the cache with the modified differencesToTimetable array
+            AssistentCache.updateJournal(journal);
+        });
     }
 
     // Function to preselect the journal entry capacity types
@@ -505,6 +545,7 @@ class TahvelJournal {
                 await TahvelJournal.setJournalEntryTypeAsContactLesson();
                 await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
                 await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
+
             };
         } else {
             action.color = "md-accent";

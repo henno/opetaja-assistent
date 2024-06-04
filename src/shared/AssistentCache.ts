@@ -137,6 +137,16 @@ export class AssistentCache {
             journal.lessonDiscrepancies = true;
         }
     }
+
+    static updateJournal(journal: AssistentJournal) {
+        const existingJournal = AssistentCache.journals.find(j => j.id === journal.id);
+        if (existingJournal) {
+            Object.assign(existingJournal, journal);
+        } else {
+            AssistentCache.journals.push(journal);
+        }
+
+    }
 }
 
 export default AssistentCache;
