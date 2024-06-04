@@ -3,7 +3,7 @@ export class AssistentDetailedError extends Error {
     title: string;
 
     constructor(code: number, title: string, message: string) {
-        super(`Error ${code}: ${title} - ${message}`)
+        super(message);
         this.code = code
         this.title = title
         this.message = message

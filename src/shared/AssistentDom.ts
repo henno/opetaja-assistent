@@ -160,7 +160,8 @@ class AssistentDom {
     }
 
     static showErrorMessage(title: string, message: string, code: number): void {
-        console.log(`Assistent error: ${title} - ${message}`)
+        debugger; // eslint-disable-line no-debugger
+
         const messageBox = document.body.appendChild(AssistentDom.createStructure(`
             <div class="assistent-message-box">
                 <div class="assistent-message-box-title">Õpetaja assistent viga ${code}</div>

@@ -14,8 +14,10 @@ export default [
     },
     rules: {
       '@typescript-eslint/no-floating-promises': ['error'],
-      //'no-console': ['error', { allow: ['warn', 'error'] }]
+      'no-debugger': 'off',
+      // other rules...
     }
+
   },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,

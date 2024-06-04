@@ -73,6 +73,7 @@ class Tahvel {
     }
 
     static handleError(error: Error): void {
+
         console.error(error)
         if (error instanceof AssistentDetailedError) {
             AssistentDom.showErrorMessage(error.title, error.message, error.code);

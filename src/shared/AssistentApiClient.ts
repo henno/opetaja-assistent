@@ -1,8 +1,7 @@
-import {AssistentDetailedError} from "./AssistentDetailedError";
+import {AssistentApiError} from "~src/shared/AssistentApiError";
 
 class AssistentApiClient {
-
-    static url: string;
+    static url: string = AssistentApiClient.extractBaseUrl();
 
     static extractBaseUrl(): string {
         const url = window.location.href;
@@ -10,82 +9,77 @@ class AssistentApiClient {
         return url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
     }
 
-    static async get(endpoint: string) {
+
+    // eslint-disable-next-line
+    static async get(endpoint: string): Promise<any> {
         return AssistentApiClient.request('GET', endpoint);
     }
 
-    static async request(method: string, endpoint: string, body: object | null = null) {
-        const options = {
-            method: method,
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json'
-            }
-        };
+    // eslint-disable-next-line
+    static async request(method: string, endpoint: string, body: object | null = null): Promise<any> {
+        const headers = new Headers({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        });
+
+        let requestBody: string | null = null;
+
         if (body !== null) {
-            options['body'] = JSON.stringify(body);
+            requestBody = JSON.stringify(body);
+            headers.append('Content-Length', new Blob([requestBody]).size.toString());
         }
-        const response = await fetch(AssistentApiClient.url + endpoint, options);
 
-        let responseBody: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let responseJson: any;
+        // Create a Request object
+        const request = new Request(AssistentApiClient.url + endpoint, {
+            method: method,
+            headers: headers,
+            body: requestBody
+        });
 
-        try {
+        // Fetch using the Request object
+        const response = await fetch(request);
+        const responseBody = await response.text();
 
-            // JSON parsing
-            responseBody = await response.text();
-            responseJson = JSON.parse(responseBody);
+        const foo = true
 
-            // Handle JSON parsing errors
-        } catch (e) {
+        // Check response validity
+        if (foo) {
+            const log = this.getHTTPRequestResponseLog(
+                method, endpoint, headers, response, requestBody, responseBody);
 
-            console.error(`Request: ${method} ${AssistentApiClient.url}${endpoint}`);
-            console.error(`Response: ${response.status} ${response.statusText}`);
-            console.error(`Response body: ${responseBody}`);
-
-            // Just empty response body
-            if (!responseBody) {
-                return null;
-            }
-
-
-            // Non-JSON response
-            throw new AssistentDetailedError(
+            console.error(log);
+            throw new AssistentApiError(
                 response.status,
-                `Error ${response.status}`,
-                'The data received from the server was not in JSON format which means that something went wrong. We apologize for the inconvenience. Please try again later.'
+                endpoint,
+                `HTTP request failed with status ${response.status} ${response.statusText}`,
+                request,  // Pass the Request object here
+                response,
+                log
             );
-
         }
 
-        // Handle HTTP errors
-        if (!response.ok) {
+        return responseBody ? JSON.parse(responseBody) : {};
+    }
 
-            // Check that the response body contains the expected fields
-            if (!responseJson.title || !responseJson.message) {
-                throw new AssistentDetailedError(
-                    response.status,
-                    `Error ${response.status}`,
-                    'The data received from the server did not contain the expected fields which means that something went wrong. We apologize for the inconvenience. Please try again later.'
-                );
-            }
+    private static getHTTPRequestResponseLog(method: string, endpoint: string, headers: Headers, response: Response, requestBody: string | null, responseBody: string): string {
+        let requestHeadersLog = `${method} ${endpoint} HTTP/1.1\n`;
+        // Log request headers
+        headers.forEach((value, key) => {
+            requestHeadersLog += `${key}: ${value}\n`;
+        });
 
-            // Normal 4xx errors will reach here
-            throw new AssistentDetailedError(
-                response.status,
-                `Error ${response.status}: ${responseJson.title}`,
-                responseJson.message
-            );
+        let responseHeadersLog = `HTTP/1.1 ${response.status} ${response.statusText}\n`;
+        // Log response headers
+        response.headers.forEach((value, key) => {
+            responseHeadersLog += `${key}: ${value}\n`;
+        });
 
-        }
+        // Formatting request and response body
+        const formattedRequestBody = requestBody ? `\n${requestBody}\n` : '\n(empty request body)\n';
+        const formattedResponseBody = responseBody ? `\n${responseBody}\n` : '\n(empty response body)\n';
 
-        // Return the response body when the response is OK
-        return responseJson
-
+        return `${requestHeadersLog}${formattedRequestBody}${responseHeadersLog}${formattedResponseBody}`;
     }
 }
 
 export default AssistentApiClient;
-
-

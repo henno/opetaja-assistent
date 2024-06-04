@@ -17,9 +17,25 @@ import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 class TahvelJournal {
     static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
 
-        const response: apiJournalEntry[] = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
+        let response: apiJournalEntry[];
+
+        try {
+
+            response = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
+
+        } catch (e) {
+
+            // If 412 then we don't have permission to read this particular journal and we should just skip it
+            if (e.status === 412) {
+                return [];
+            }
+
+        }
+
         if (!response) {
+
             throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
+
         }
 
         return response.map(entry => ({

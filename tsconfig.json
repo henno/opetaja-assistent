@@ -1,8 +1,6 @@
 {
   "extends": "plasmo/templates/tsconfig.base",
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["node_modules"],
   "include": [
     ".plasmo/index.d.ts",
     "./**/*.ts",
@@ -10,10 +8,10 @@
     "./**/*.svelte"
   ],
   "compilerOptions": {
+    "sourceMap": true, // Enable source map generation
+    "inlineSources": true, // Optionally include sources in source maps
     "paths": {
-      "~*": [
-        "./*"
-      ]
+      "~*": ["./*"]
     },
     "baseUrl": "."
   }

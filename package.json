@@ -9,7 +9,7 @@
   },
   "scripts": {
     "lint": "eslint --fix src",
-    "dev": "pnpm i && pnpm lint && plasmo dev",
+    "dev": "pnpm i && pnpm lint && plasmo dev --source-maps",
     "dev:firefox": "pnpm i && pnpm lint && plasmo dev --target=firefox-mv2",
     "build": "pnpm lint && plasmo build",
     "package": "plasmo package"

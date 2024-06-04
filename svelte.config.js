@@ -1,7 +1,11 @@
-const sveltePreprocess = require("svelte-preprocess")
+const sveltePreprocess = require("svelte-preprocess");
 
 module.exports = {
-    // Consult https://github.com/sveltejs/svelte-preprocess
-    // for more information about preprocessors
-    preprocess: sveltePreprocess()
-}
+    preprocess: sveltePreprocess({
+        sourceMap: true // Ensure preprocessors generate source maps for debugging
+    }),
+    compilerOptions: {
+        dev: process.env.NODE_ENV !== 'production',
+        sourcemap: true // Enable source maps for Svelte compiler output
+    }
+};
