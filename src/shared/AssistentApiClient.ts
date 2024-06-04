@@ -40,10 +40,8 @@ class AssistentApiClient {
         const response = await fetch(request);
         const responseBody = await response.text();
 
-        const foo = true
-
         // Check response validity
-        if (foo) {
+        if (!response.ok) {
             const log = this.getHTTPRequestResponseLog(
                 method, endpoint, headers, response, requestBody, responseBody);
 
@@ -51,7 +49,7 @@ class AssistentApiClient {
             throw new AssistentApiError(
                 response.status,
                 endpoint,
-                `HTTP request failed with status ${response.status} ${response.statusText}`,
+                log,
                 request,  // Pass the Request object here
                 response,
                 log
@@ -78,7 +76,7 @@ class AssistentApiClient {
         const formattedRequestBody = requestBody ? `\n${requestBody}\n` : '\n(empty request body)\n';
         const formattedResponseBody = responseBody ? `\n${responseBody}\n` : '\n(empty response body)\n';
 
-        return `${requestHeadersLog}${formattedRequestBody}${responseHeadersLog}${formattedResponseBody}`;
+        return `${requestHeadersLog}${formattedRequestBody}\n\n${responseHeadersLog}${formattedResponseBody}`;
     }
 }
 

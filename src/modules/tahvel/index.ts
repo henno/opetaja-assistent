@@ -12,6 +12,7 @@ import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
 import {apiAssessmentEntry, type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
 import {AssistentGradingType} from "~src/shared/AssistentTypes";
 import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
+import {AssistentApiError} from "~src/shared/AssistentApiError";
 
 const urlForJournalsList = '/#/journals(\\?_menu)?';
 const urlForJournalEdit = '#/journal/\\d+/edit';
@@ -73,8 +74,12 @@ class Tahvel {
     }
 
     static handleError(error: Error): void {
-
         console.error(error)
+
+        if(error instanceof AssistentApiError) {
+            AssistentDom.showErrorMessage('HTTP päring veebiteenusele lõppes õnnetult:', error.message, error.statusCode);
+            return;
+        }
         if (error instanceof AssistentDetailedError) {
             AssistentDom.showErrorMessage(error.title, error.message, error.code);
         } else {
