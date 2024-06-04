@@ -4,7 +4,15 @@ import {type AssistentStudent, AssistentStudentStatus} from "~src/shared/Assiste
 
 class TahvelStudents {
     static async fetchEntries(journalId: number): Promise<AssistentStudent[]> {
-        const response: apiStudentEntry[] = await Api.get(`/journals/${journalId}/journalStudents`);
+        let response: apiStudentEntry[];
+        try {
+            response = await Api.get(`/journals/${journalId}/journalStudents`);
+        } catch (e) {
+            // If 412 then we don't have permission to read this particular journal and we should just skip it
+            if (e.statusCode === 412) {
+                return [];
+            }
+        }
         return response.map(({studentId, fullname, status}) => ({
             studentId,
             name: fullname,

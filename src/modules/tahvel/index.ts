@@ -176,7 +176,14 @@ class Tahvel {
             journal.students = await TahvelStudents.fetchEntries(journal.id);
             journal.learningOutcomes = await TahvelJournal.fetchLearningOutcomes(journal.id);
 
-            const response: apiJournalInfoEntry = await Api.get(`/journals/${journal.id}`);
+            let response: apiJournalInfoEntry;
+            try {
+                response = await Api.get(`/journals/${journal.id}`);
+            } catch (e) {
+                if (e.statusCode === 412) {
+                    continue;
+                }
+            }
 
             if (!response) {
                 throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');

@@ -41,7 +41,7 @@ class TahvelDom {
 
         // Find the select element using the model name
         const mdSelectSelector = `md-select[ng-model="${model}"]`;
-        const selectElement = await AssistentDom.waitForElementToBeVisible(mdSelectSelector) as HTMLSelectElement
+        const selectElement = await AssistentDom.waitForElement(mdSelectSelector) as HTMLSelectElement
         if (!selectElement) {
             throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdSelectSelector + ' not found.');
         }
@@ -55,7 +55,7 @@ class TahvelDom {
 
         const mdContentId = await AssistentDom.waitForAttributeToAppear(selectElement, 'aria-owns');
         const mdContentSelector = `md-content[id="${mdContentId}"]`
-        const mdContentElement = await AssistentDom.waitForElementToBeVisible(mdContentSelector) as HTMLElement;
+        const mdContentElement = await AssistentDom.waitForElement(mdContentSelector) as HTMLElement;
         if (!mdContentElement) {
             throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdContentSelector + ' not found.');
         }
@@ -110,7 +110,10 @@ class TahvelDom {
 
         return TahvelDom.createButton(color, text, async () => {
 
+            console.log(typeof elementOrSelector);
             const element = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) as HTMLElement : elementOrSelector;
+
+            console.log("elementOrSelector", elementOrSelector);
 
             if (element) {
                 element.click();

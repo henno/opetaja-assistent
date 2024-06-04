@@ -76,7 +76,9 @@ class AssistentDom {
         let element: Element | null = null;
         let timeoutOccurred = false;
 
+        console.log('Waiting for element to be visible:', s);
         element = await AssistentDom.waitForElement(s);
+        console.log('Element found:', element);
 
         if (!element) {
             throw new AssistentDetailedError(500, 'Element not found', `Element ${s} not found.`);

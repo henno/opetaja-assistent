@@ -25,8 +25,9 @@ class TahvelJournal {
 
         } catch (e) {
 
+            console.log(typeof e.statusCode);
             // If 412 then we don't have permission to read this particular journal and we should just skip it
-            if (e.status === 412) {
+            if (e.statusCode === 412) {
                 return [];
             }
 
@@ -288,7 +289,14 @@ class TahvelJournal {
     }
 
     static async fetchLearningOutcomes(journalId: number): Promise<AssistentLearningOutcomes[]> {
-        const response: apiCurriculumModuleEntry[] = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
+        let response: apiCurriculumModuleEntry[];
+        try {
+            response = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
+        } catch (e) {
+            if (e.statusCode === 412) {
+                return [];
+            }
+        }
 
         if (!response) {
             throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
