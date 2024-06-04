@@ -25,7 +25,7 @@ class TahvelJournal {
 
         } catch (e) {
 
-            // If 412 then we don't have permission to read this particular journal and we should just skip it
+            // If 412 then we don't have permission to read this particular journal, and we should just skip it
             if (e.statusCode === 412) {
                 return [];
             }
@@ -250,7 +250,7 @@ class TahvelJournal {
     }
 
     static setGradeForStudent(id: number, grade: string) {
-        // find tr where a href contains student id
+        // find <tr> where a href contains student id
         const tr = TahvelJournal.findTableRowById(id);
 
         // add grade to corresponding input
@@ -334,6 +334,7 @@ class TahvelJournal {
         return learningOutcomes;
     }
 
+
     private static removeGroupNameIfAllOutcomesAreForTheSameGroup(outcomes: AssistentLearningOutcomes[]) {
 
         const getGroupName = (name: string) => (name.match(/\(([^)]+)\)/g) || []).slice(-1)[0]?.slice(1, -1) || '';
@@ -358,8 +359,16 @@ class TahvelJournal {
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
+            TahvelJournal.handleSaveButtonClick(discrepancy);
         }
+
+        saveButton.addEventListener('click', () => {
+            console.log('saveButton clicked');
+            window.location.reload();
+        });
     }
+
+
 
     static async setJournalEntryCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
         const timetableLessons = discrepancy.timetableLessonCount;
@@ -377,9 +386,56 @@ class TahvelJournal {
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
+            TahvelJournal.handleSaveButtonClick(discrepancy);
         }
 
         saveButton.addEventListener('click', () => {
+            console.log('saveButton clicked');
+            // window.location.reload();
+        });
+
+
+        // saveButton.addEventListener('click', () => {
+        //     // convert discrepancy.date to dd.mm.yyyy
+        //     const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+        //
+        //     // If user clicks saveButton then hide tr where first td element contains discrepancy.date in table id="assistent-discrepancies-table"
+        //     const tr = Array.from(document.querySelectorAll('#assistent-discrepancies-table tbody tr')).find(tr => {
+        //         const td = tr.querySelector('td');
+        //         return td?.textContent === date;
+        //     }) as HTMLElement;
+        //
+        //     if (tr) {
+        //         tr.style.display = 'none';
+        //     }
+        //
+        //     // count tr's left in #assistent-discrepancies-table
+        //     const trs = document.querySelectorAll('#assistent-discrepancies-table tbody tr');
+        //     console.log('trs', trs.length);
+        //
+        //     // trs.length === 1 then remove #assistent-discrepancies-table
+        //     if (trs.length === 1) {
+        //         const table = document.querySelector('#assistent-discrepancies-table') as HTMLElement;
+        //         table.style.display = 'none';
+        //     }
+        //
+        //     // remove data from discrpanciesToTimetable
+        //     // Retrieve the journal from the cache using the journal ID parsed from the current URL
+        //     const journal = AssistentCache.getJournal(parseInt(window.location.href.split('/')[5]));
+        //
+        //     // Find the index of the discrepancy in the journal's differencesToTimetable array that matches the current discrepancy date
+        //     const index = journal.differencesToTimetable.findIndex(d => d.date === discrepancy.date);
+        //
+        //     // Remove the discrepancy from the journal's differencesToTimetable array using the found index
+        //     journal.differencesToTimetable.splice(index, 1);
+        //
+        //     // Update the journal in the cache with the modified differencesToTimetable array
+        //     AssistentCache.updateJournal(journal);
+        // });
+    }
+
+    static handleSaveButtonClick(discrepancy: AssistentJournalDifference) {
+        // saveButton.addEventListener('click', () => {
             // convert discrepancy.date to dd.mm.yyyy
             const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
 
@@ -395,7 +451,6 @@ class TahvelJournal {
 
             // count tr's left in #assistent-discrepancies-table
             const trs = document.querySelectorAll('#assistent-discrepancies-table tbody tr');
-            console.log('trs', trs.length);
 
             // trs.length === 1 then remove #assistent-discrepancies-table
             if (trs.length === 1) {
@@ -415,7 +470,7 @@ class TahvelJournal {
 
             // Update the journal in the cache with the modified differencesToTimetable array
             AssistentCache.updateJournal(journal);
-        });
+        // });
     }
 
     // Function to preselect the journal entry capacity types
@@ -519,16 +574,18 @@ class TahvelJournal {
             },
         };
 
+        let deleteButton;
         if (isLessonsInDiaryButNotInTimetable) {
             action.color = "md-warn";
             action.text = "Vaata sissekannet";
             action.callback = async () => {
                 const style = TahvelDom.createBlinkStyle();
                 document.head.append(style);
-                const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
+                deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
                 if (deleteButton) {
                     deleteButton.classList.add('blink');
                 }
+                TahvelJournal.handleSaveButtonClick(discrepancy);
             };
         } else if (isLessonsInTimetableButNotInDiary) {
             action.color = "md-primary";
@@ -545,7 +602,6 @@ class TahvelJournal {
                 await TahvelJournal.setJournalEntryTypeAsContactLesson();
                 await TahvelJournal.setJournalEntryStartLessonNr(discrepancy);
                 await TahvelJournal.setJournalEntryCountOfLessons(discrepancy);
-
             };
         } else {
             action.color = "md-accent";
