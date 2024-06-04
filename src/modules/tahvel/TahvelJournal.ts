@@ -359,11 +359,11 @@ class TahvelJournal {
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
-            TahvelJournal.handleSaveButtonClick(discrepancy);
         }
 
         saveButton.addEventListener('click', () => {
             console.log('saveButton clicked');
+            TahvelJournal.handleSaveButtonClick(discrepancy);
             window.location.reload();
         });
     }
@@ -386,12 +386,13 @@ class TahvelJournal {
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
-            TahvelJournal.handleSaveButtonClick(discrepancy);
+
         }
 
         saveButton.addEventListener('click', () => {
             console.log('saveButton clicked');
-            // window.location.reload();
+            TahvelJournal.handleSaveButtonClick(discrepancy);
+            window.location.reload();
         });
 
 
