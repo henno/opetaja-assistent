@@ -79,7 +79,7 @@ export enum LessonType {
 
 export interface AssistentLearningOutcomes {
     name: string,
-    code?: string,
+    code: string,
     studentOutcomeResults?: AssistentStudentOutcomeResults[]
 }
 
@@ -89,6 +89,7 @@ export interface AssistentStudentOutcomeResults {
 
 export interface AssistentStudentsWithoutGrades {
     name: string,
+    code: string,
     studentList: AssistentStudent[]
 }
 

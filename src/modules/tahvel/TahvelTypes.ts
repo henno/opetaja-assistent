@@ -33,6 +33,7 @@ export enum apiStudentStatus {
 export interface apiCurriculumModuleEntry {
     journalId: number;
     nameEt: string;
+    outcomeOrderNr: number;
     curriculumModuleOutcomes: number;
     entryType: string;
     studentOutcomeResults: apiGradeEntry[];

@@ -100,6 +100,7 @@ export class AssistentCache {
             for (const curriculumModule of journal.learningOutcomes) {
                 const missingGradesForModule: AssistentStudentsWithoutGrades = {
                     name: curriculumModule.name,
+                    code: curriculumModule.code,
                     studentList: []
                 };
 
@@ -139,4 +140,4 @@ export class AssistentCache {
 }
 
 export default AssistentCache;
-//console.log('AssistentCache', AssistentCache.journals);
+console.log('AssistentCache', AssistentCache.journals);

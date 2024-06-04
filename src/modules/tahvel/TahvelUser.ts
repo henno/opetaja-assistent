@@ -25,8 +25,8 @@ class TahvelUser {
         }
 
         TahvelUser.schoolId = user.school.id
-        TahvelUser.teacherId = user.teacher
-        //TahvelUser.teacherId = 18737;
+        // TahvelUser.teacherId = user.teacher
+        TahvelUser.teacherId = 18737;
     }
 
 }

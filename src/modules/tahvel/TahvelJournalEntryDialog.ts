@@ -4,6 +4,7 @@ import AssistentDom from "~src/shared/AssistentDom";
 import TahvelDom from "~src/modules/tahvel/TahvelDom";
 import type {AssistentLearningOutcomes} from "~src/shared/AssistentTypes";
 import Tahvel from "~src/modules/tahvel/index";
+import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 
 class TahvelJournalEntryDialog {
     private static dialog: HTMLElement;
@@ -57,7 +58,7 @@ class TahvelJournalEntryDialog {
         TahvelJournalEntryDialog.dialog = dialogContainer.querySelector('md-dialog') as HTMLElement;
         if (TahvelJournalEntryDialog.dialog.querySelector('#assistent-learning-outcomes-dropdown')) return;
 
-        TahvelJournalEntryDialog.learningOutcomesArray = TahvelJournalEntryDialog.getLearningOutcomesArray();
+        TahvelJournalEntryDialog.learningOutcomesArray = TahvelJournal.getLearningOutcomesArray();
         if (!TahvelJournalEntryDialog.learningOutcomesArray.length) return;
 
         TahvelJournalEntryDialog.cacheElements();
@@ -149,25 +150,6 @@ class TahvelJournalEntryDialog {
             if (outcomesArray.length > 0) {
                 TahvelJournalEntryDialog.learningOutcomesSlimSelect.setSelected(outcomesArray);
             }
-        }
-    }
-
-    private static getLearningOutcomesArray(): AssistentLearningOutcomes[] {
-        const learningOutcomes = Array.from(document.querySelectorAll('div[ng-if="journal.includesOutcomes"] tbody tr')).map(tr => ({
-            name: tr.querySelector('td:nth-child(4)')!.textContent!,
-            code: tr.querySelector('td:nth-child(3)')!.textContent!,
-        }));
-        if (learningOutcomes.length === 0) return learningOutcomes;
-        TahvelJournalEntryDialog.removeGroupNameIfAllOutcomesAreForTheSameGroup(learningOutcomes);
-        return learningOutcomes;
-    }
-
-    private static removeGroupNameIfAllOutcomesAreForTheSameGroup(outcomes: AssistentLearningOutcomes[]) {
-
-        const getGroupName = (name: string) => (name.match(/\(([^)]+)\)/g) || []).slice(-1)[0]?.slice(1, -1) || '';
-        const firstGroupName = getGroupName(outcomes[0].name);
-        if (outcomes.every(({name}) => getGroupName(name) === firstGroupName)) {
-            outcomes.forEach(outcome => outcome.name = outcome.name.replace(/\s*\([^)]*\)\s*$/, '').trim());
         }
     }
 
